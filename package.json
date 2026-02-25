@@ -1,5 +1,5 @@
 {
-  "name": "@hedgelayer/cli",
+  "name": "@hedge-layer/cli",
   "version": "0.1.0",
   "description": "CLI for Hedge Layer — hedge real-world risks on Polymarket",
   "type": "module",
@@ -30,7 +30,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hedgelayer/cli.git"
+    "url": "https://github.com/hedge-layer/hedge-layer-cli.git"
   },
   "dependencies": {
     "chalk": "^5.4.1",
