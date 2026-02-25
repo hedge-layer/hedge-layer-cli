@@ -1,0 +1,45 @@
+{
+  "name": "@hedgelayer/cli",
+  "version": "0.1.0",
+  "description": "CLI for Hedge Layer — hedge real-world risks on Polymarket",
+  "type": "module",
+  "bin": {
+    "hl": "./dist/index.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "hedge",
+    "polymarket",
+    "prediction-markets",
+    "risk",
+    "cli"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hedgelayer/cli.git"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "ora": "^8.2.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.0"
+  }
+}
