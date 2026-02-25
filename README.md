@@ -1,5 +1,8 @@
 # @hedgelayer/cli
 
+[![npm version](https://img.shields.io/npm/v/@hedgelayer/cli)](https://www.npmjs.com/package/@hedgelayer/cli)
+[![license](https://img.shields.io/github/license/hedgelayer/cli)](LICENSE)
+
 Command-line interface for [Hedge Layer](https://hedgelayer.ai) — hedge real-world risks on Polymarket prediction markets.
 
 ## Install
@@ -140,6 +143,10 @@ git push --tags
 ```
 
 The workflow builds and publishes to npm when a version tag (`v*`) is pushed. Requires an `NPM_TOKEN` secret in the repo settings.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
