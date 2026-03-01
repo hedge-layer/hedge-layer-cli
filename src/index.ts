@@ -11,7 +11,7 @@ const program = new Command();
 program
   .name("hl")
   .description("Hedge Layer CLI — hedge real-world risks on Polymarket")
-  .version("0.1.0")
+  .version(__VERSION__)
   .option("--json", "Output as JSON (machine-readable)")
   .option("--api-url <url>", "Override API base URL")
   .option("--token <token>", "Override stored API token")

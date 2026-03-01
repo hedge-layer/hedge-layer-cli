@@ -24,7 +24,15 @@ export function registerAssessCommands(program: Command): void {
         chalk.dim("  Describe the risks you want to hedge. Type /quit to exit.\n\n"),
       );
 
-      const messages: { role: string; content: string }[] = [];
+      let msgCounter = 0;
+      const uiMsg = (role: string, content: string) => ({
+        id: `msg-${++msgCounter}`,
+        role,
+        content,
+        parts: [{ type: "text" as const, text: content }],
+      });
+
+      const messages: ReturnType<typeof uiMsg>[] = [];
       const rl = readline.createInterface({ input: process.stdin, output: process.stderr });
 
       try {
@@ -34,7 +42,7 @@ export function registerAssessCommands(program: Command): void {
           if (!userInput.trim()) continue;
           if (userInput.trim() === "/quit") break;
 
-          messages.push({ role: "user", content: userInput });
+          messages.push(uiMsg("user", userInput));
 
           process.stderr.write(chalk.dim("\nAssistant: "));
 
@@ -62,7 +70,7 @@ export function registerAssessCommands(program: Command): void {
             process.stderr.write("\n\n");
 
             if (result.assistantText) {
-              messages.push({ role: "assistant", content: result.assistantText });
+              messages.push(uiMsg("assistant", result.assistantText));
             }
 
             if (result.hedgeBundle) {

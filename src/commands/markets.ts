@@ -1,48 +1,11 @@
 import { Command } from "commander";
 import chalk from "chalk";
 import { ApiClient } from "../client.js";
-import type { Market, Orderbook, SlippageResult, GlobalOptions } from "../types.js";
+import type { Orderbook, SlippageResult, GlobalOptions } from "../types.js";
 import * as out from "../output.js";
 
 export function registerMarketCommands(program: Command): void {
-  const markets = program.command("markets").description("Browse Polymarket prediction markets");
-
-  markets
-    .command("search <query>")
-    .description("Search for markets by keyword")
-    .option("-l, --limit <n>", "Max results", "10")
-    .action(async (query: string, cmdOpts: { limit: string }) => {
-      const globalOpts = program.opts<GlobalOptions>();
-      const client = new ApiClient(globalOpts);
-
-      const data = await client.get<{ markets: Market[]; total: number }>("/api/markets", {
-        q: query,
-        limit: cmdOpts.limit,
-      });
-
-      if (globalOpts.json) {
-        out.json(data);
-        return;
-      }
-
-      if (data.markets.length === 0) {
-        out.warn(`No markets found for "${query}"`);
-        return;
-      }
-
-      out.heading(`Markets matching "${query}" (${data.total} total)`);
-
-      const rows = data.markets.map((m) => {
-        const prices = parseOutcomePrices(m.outcomePrices);
-        const yesPrice = prices ? out.percent(prices[0]) : "—";
-        const vol = formatVolume(m.volume);
-        const end = m.endDate ? formatDate(m.endDate) : "—";
-        const status = m.closed ? chalk.red("closed") : chalk.green("active");
-        return [out.truncate(m.question, 50), yesPrice, vol, end, status];
-      });
-
-      out.table(rows, ["Market", "YES", "Volume", "Ends", "Status"]);
-    });
+  const markets = program.command("markets").description("Polymarket orderbook tools");
 
   markets
     .command("orderbook <tokenId>")
@@ -104,27 +67,3 @@ export function registerMarketCommands(program: Command): void {
     });
 }
 
-function parseOutcomePrices(raw: string): [number, number] | null {
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length === 2) {
-      return [Number(parsed[0]), Number(parsed[1])];
-    }
-  } catch {
-    // ignore
-  }
-  return null;
-}
-
-function formatVolume(vol: string): string {
-  const n = Number(vol);
-  if (isNaN(n)) return vol;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
-  return `$${n.toFixed(0)}`;
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}

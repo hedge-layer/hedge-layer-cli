@@ -1,15 +1,15 @@
 /**
- * Parses the Vercel AI SDK streaming response format.
+ * Parses the Vercel AI SDK UI Message Stream protocol (SSE format).
  *
- * The AI SDK uses a line-based protocol where each line is prefixed with
- * a type code and colon. Key types:
- *   0: text delta (JSON-encoded string)
- *   9: tool call begin { toolCallId, toolName }
- *   a: tool call delta (partial JSON args)
- *   b: tool result { toolCallId, result }
- *   d: finish message data (array)
- *   e: error
- *   f: message annotations
+ * The server sends Server-Sent Events where each `data:` line contains
+ * a JSON object with a `type` field:
+ *   text-delta:           { type, id, delta }
+ *   tool-input-start:     { type, toolCallId, toolName }
+ *   tool-input-delta:     { type, toolCallId, inputTextDelta }
+ *   tool-input-available: { type, toolCallId, toolName, input }
+ *   tool-output-available:{ type, toolCallId, output }
+ *   error:                { type, errorText }
+ *   [DONE]:               stream termination sentinel
  */
 
 export interface StreamCallbacks {
@@ -39,106 +39,90 @@ export async function parseStream(
 
   while (true) {
     const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+    if (!done) {
+      buffer += decoder.decode(value, { stream: true });
+    }
 
     const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
+    buffer = done ? "" : (lines.pop() ?? "");
 
     for (const line of lines) {
-      if (line.length < 2 || line[1] !== ":") continue;
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith(":")) continue;
 
-      const type = line[0];
-      const payload = line.slice(2);
+      if (!trimmed.startsWith("data:")) continue;
+      const payload = trimmed.slice(5).trim();
+
+      if (payload === "[DONE]") continue;
+
+      let msg: Record<string, unknown>;
+      try {
+        msg = JSON.parse(payload);
+      } catch {
+        continue;
+      }
+
+      const type = msg.type as string;
 
       switch (type) {
-        case "0": {
-          try {
-            const text = JSON.parse(payload) as string;
-            assistantText += text;
-            callbacks.onText?.(text);
-          } catch {
-            // skip malformed text delta
+        case "text-delta": {
+          const delta = msg.delta as string;
+          if (delta) {
+            assistantText += delta;
+            callbacks.onText?.(delta);
           }
           break;
         }
 
-        case "9": {
-          try {
-            const data = JSON.parse(payload) as { toolCallId: string; toolName: string };
-            activeToolCalls.set(data.toolCallId, { name: data.toolName, argStr: "" });
-          } catch {
-            // skip
+        case "tool-input-start": {
+          const id = msg.toolCallId as string;
+          const name = msg.toolName as string;
+          if (id && name) {
+            activeToolCalls.set(id, { name, argStr: "" });
           }
           break;
         }
 
-        case "a": {
-          try {
-            const data = JSON.parse(payload) as { toolCallId: string; argsTextDelta: string };
-            const active = activeToolCalls.get(data.toolCallId);
-            if (active) active.argStr += data.argsTextDelta;
-          } catch {
-            // skip
+        case "tool-input-delta": {
+          const id = msg.toolCallId as string;
+          const active = activeToolCalls.get(id);
+          if (active) {
+            active.argStr += msg.inputTextDelta as string;
           }
           break;
         }
 
-        case "b": {
-          try {
-            const data = JSON.parse(payload) as { toolCallId: string; result: unknown };
-            const active = activeToolCalls.get(data.toolCallId);
-            if (active) {
-              let args: unknown = undefined;
-              try {
-                args = JSON.parse(active.argStr);
-              } catch {
-                args = active.argStr;
-              }
-              toolCalls.push({ name: active.name, args });
-              callbacks.onToolCall?.(active.name, args);
-              callbacks.onToolResult?.(active.name, data.result);
+        case "tool-input-available": {
+          const id = msg.toolCallId as string;
+          const active = activeToolCalls.get(id);
+          if (active) {
+            const args = msg.input ?? active.argStr;
+            toolCalls.push({ name: active.name, args });
+            callbacks.onToolCall?.(active.name, args);
+          }
+          break;
+        }
 
-              if (active.name === "buildHedgeBundle" && isHedgeBundle(data.result)) {
-                hedgeBundle = data.result as Record<string, unknown>;
-              }
-              activeToolCalls.delete(data.toolCallId);
+        case "tool-output-available": {
+          const id = msg.toolCallId as string;
+          const active = activeToolCalls.get(id);
+          if (active) {
+            callbacks.onToolResult?.(active.name, msg.output);
+            if (active.name === "buildHedgeBundle" && isHedgeBundle(msg.output)) {
+              hedgeBundle = msg.output as Record<string, unknown>;
             }
-          } catch {
-            // skip
+            activeToolCalls.delete(id);
           }
           break;
         }
 
-        case "d": {
-          try {
-            const finishData = JSON.parse(payload);
-            if (Array.isArray(finishData)) {
-              for (const item of finishData) {
-                if (item && typeof item === "object" && "positions" in item) {
-                  hedgeBundle = item as Record<string, unknown>;
-                }
-              }
-            }
-          } catch {
-            // skip
-          }
-          break;
-        }
-
-        case "e": {
-          try {
-            const errData = JSON.parse(payload);
-            throw new Error(
-              typeof errData === "string" ? errData : JSON.stringify(errData),
-            );
-          } catch (e) {
-            if (e instanceof Error && e.message !== payload) throw e;
-          }
-          break;
+        case "error": {
+          throw new Error((msg.errorText as string) ?? "Unknown stream error");
         }
       }
     }
+
+    if (done) break;
   }
 
   return { assistantText, toolCalls, hedgeBundle };
