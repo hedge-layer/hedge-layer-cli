@@ -4,7 +4,7 @@
   "description": "CLI for Hedge Layer — hedge real-world risks on Polymarket",
   "type": "module",
   "bin": {
-    "hl": "./dist/index.mjs"
+    "hl": "dist/index.mjs"
   },
   "files": [
     "dist"
@@ -27,10 +27,13 @@
     "risk",
     "cli"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hedge-layer/hedge-layer-cli.git"
+    "url": "git+https://github.com/hedge-layer/hedge-layer-cli.git"
   },
   "dependencies": {
     "chalk": "^5.4.1",

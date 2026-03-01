@@ -134,7 +134,7 @@ npm version patch    # or minor / major
 git push --tags
 ```
 
-The workflow builds and publishes to npm when a version tag (`v*`) is pushed. Requires an `NPM_TOKEN` secret in the repo settings.
+The workflow builds and publishes to npm when a version tag (`v*`) is pushed. Authentication uses npm's OIDC trusted publishers — no secrets required.
 
 ## Changelog
 
