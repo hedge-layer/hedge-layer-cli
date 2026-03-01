@@ -1,11 +1,14 @@
-# @hedgelayer/cli
+# @hedge-layer/cli
+
+[![npm version](https://img.shields.io/npm/v/@hedge-layer/cli)](https://www.npmjs.com/package/@hedge-layer/cli)
+[![license](https://img.shields.io/github/license/hedge-layer/hedge-layer-cli)](LICENSE)
 
 Command-line interface for [Hedge Layer](https://hedgelayer.ai) — hedge real-world risks on Polymarket prediction markets.
 
 ## Install
 
 ```bash
-npm install -g @hedgelayer/cli
+npm install -g @hedge-layer/cli
 ```
 
 Requires Node.js 22 or later.
@@ -112,8 +115,8 @@ hl --json assess list | jq '.[0].id'
 ## Development
 
 ```bash
-git clone https://github.com/hedgelayer/cli.git
-cd cli
+git clone https://github.com/hedge-layer/hedge-layer-cli.git
+cd hedge-layer-cli
 npm install
 npm run build        # Build with tsup
 npm run dev          # Watch mode
@@ -132,6 +135,10 @@ git push --tags
 ```
 
 The workflow builds and publishes to npm when a version tag (`v*`) is pushed. Requires an `NPM_TOKEN` secret in the repo settings.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
