@@ -39,11 +39,12 @@ export async function parseStream(
 
   while (true) {
     const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+    if (!done) {
+      buffer += decoder.decode(value, { stream: true });
+    }
 
     const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
+    buffer = done ? "" : (lines.pop() ?? "");
 
     for (const line of lines) {
       if (line.length < 2 || line[1] !== ":") continue;
@@ -127,18 +128,20 @@ export async function parseStream(
         }
 
         case "e": {
+          let errData: unknown;
           try {
-            const errData = JSON.parse(payload);
-            throw new Error(
-              typeof errData === "string" ? errData : JSON.stringify(errData),
-            );
-          } catch (e) {
-            if (e instanceof Error && e.message !== payload) throw e;
+            errData = JSON.parse(payload);
+          } catch {
+            break;
           }
-          break;
+          throw new Error(
+            typeof errData === "string" ? errData : JSON.stringify(errData),
+          );
         }
       }
     }
+
+    if (done) break;
   }
 
   return { assistantText, toolCalls, hedgeBundle };
