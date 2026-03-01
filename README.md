@@ -17,10 +17,7 @@ Requires Node.js 22 or later.
 # 2. Authenticate the CLI
 hl auth login
 
-# 3. Search prediction markets
-hl markets search "hurricane"
-
-# 4. Start an interactive risk assessment
+# 3. Start an interactive risk assessment
 hl assess
 ```
 
@@ -37,20 +34,16 @@ hl auth logout     # Remove stored token
 You can also pass a token inline for CI/scripts:
 
 ```bash
-hl --token hl_abc123... markets search "earthquake"
+hl --token hl_abc123... assess list
 ```
 
 ## Commands
 
 ### Markets
 
-Browse Polymarket prediction markets (no authentication required).
+Polymarket orderbook tools.
 
 ```bash
-# Search markets by keyword
-hl markets search "wildfire"
-hl markets search "hurricane" --limit 20
-
 # View orderbook for a specific CLOB token
 hl markets orderbook <tokenId>
 hl markets orderbook <tokenId> --size 1000
@@ -113,7 +106,6 @@ hl profile
 Every command supports `--json` for pipe-friendly output:
 
 ```bash
-hl --json markets search "flood" | jq '.markets[].question'
 hl --json assess list | jq '.[0].id'
 ```
 
@@ -127,7 +119,7 @@ npm run build        # Build with tsup
 npm run dev          # Watch mode
 
 # Test against local dev server
-node dist/index.mjs --api-url http://localhost:3000 markets search "test"
+node dist/index.mjs --api-url http://localhost:3000 assess list
 ```
 
 ## Publishing
