@@ -11,13 +11,8 @@ See `package.json` scripts and `README.md` for standard commands:
 - **Build:** `npm run build` (produces `dist/index.mjs` via tsup)
 - **Dev watch:** `npm run dev`
 - **Run CLI:** `node dist/index.mjs [options] [command]`
-- **Tests:** `npm run test` (vitest — note: no test files exist yet)
-- **Lint:** `npm run lint` (note: `eslint` is referenced in the lint script but not listed as a devDependency; this command currently fails with `eslint: not found`)
-
-### Known gaps
-
-- `eslint` is not in `devDependencies`, so `npm run lint` fails. If you need linting, install it first: `npm install --save-dev eslint`.
-- No test files exist yet. `npm run test` exits with code 1 ("No test files found").
+- **Tests:** `npm run test` (vitest — tests in `src/*.test.ts`)
+- **Lint:** `npm run lint` (eslint with typescript-eslint flat config)
 
 ### Running the CLI
 
