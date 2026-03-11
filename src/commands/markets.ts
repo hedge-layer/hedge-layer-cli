@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import chalk from "chalk";
-import { ApiClient } from "../client.js";
+import { ApiClient, ApiError } from "../client.js";
 import type { Orderbook, SlippageResult, GlobalOptions } from "../types.js";
 import * as out from "../output.js";
 
@@ -18,12 +18,28 @@ export function registerMarketCommands(program: Command): void {
       const params: Record<string, string> = { tokenId };
       if (cmdOpts.size) params.size = cmdOpts.size;
 
-      const data = await client.get<{
+      let data: {
         book: Orderbook;
         spread: { bid: number; ask: number; spread: number } | null;
         askDepth: number;
         slippage: SlippageResult | null;
-      }>("/api/orderbook", params);
+      };
+      try {
+        data = await client.get("/api/orderbook", params);
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 404) {
+          out.error(
+            "Orderbook not available for this token. Use a valid Polymarket CLOB token ID (from gamma-api.polymarket.com/markets clobTokenIds).",
+          );
+          process.exit(1);
+        }
+        throw e;
+      }
+
+      if ("error" in data && typeof (data as { error?: string }).error === "string") {
+        out.error((data as { error: string }).error);
+        process.exit(1);
+      }
 
       if (globalOpts.json) {
         out.json(data);
@@ -53,13 +69,13 @@ export function registerMarketCommands(program: Command): void {
         ]);
       }
 
-      if (data.book.asks.length > 0) {
+      if (data.book?.asks?.length > 0) {
         process.stdout.write("\n" + chalk.dim("  Top 5 asks:") + "\n");
         const askRows = data.book.asks.slice(0, 5).map((l) => [l.price, l.size]);
         out.table(askRows, ["Price", "Size"]);
       }
 
-      if (data.book.bids.length > 0) {
+      if (data.book?.bids?.length > 0) {
         process.stdout.write("\n" + chalk.dim("  Top 5 bids:") + "\n");
         const bidRows = data.book.bids.slice(0, 5).map((l) => [l.price, l.size]);
         out.table(bidRows, ["Price", "Size"]);

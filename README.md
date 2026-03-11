@@ -125,6 +125,8 @@ npm run dev          # Watch mode
 node dist/index.mjs --api-url http://localhost:3000 assess list
 ```
 
+See [docs/API.md](docs/API.md) for the API endpoints used by the CLI.
+
 ## Publishing
 
 Releases are automated via GitHub Actions. To publish a new version:
