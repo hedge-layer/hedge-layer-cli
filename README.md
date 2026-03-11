@@ -125,7 +125,8 @@ npm run dev          # Watch mode
 node dist/index.mjs --api-url http://localhost:3000 assess list
 ```
 
-See [docs/API.md](docs/API.md) for the API endpoints used by the CLI.
+- **API docs:** [hedgelayer.ai/docs](https://hedgelayer.ai/docs) → [API Reference](https://hedgelayer.ai/docs/api)
+- **CLI API reference:** [docs/API.md](docs/API.md)
 
 ## Publishing
 

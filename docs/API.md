@@ -1,6 +1,6 @@
 # Hedge Layer API Reference
 
-This document describes the API endpoints used by the CLI. There is no official public API documentation; this reference is derived from the CLI implementation and live API testing (March 2026).
+This document describes the API endpoints used by the CLI. **Official documentation:** [https://hedgelayer.ai/docs](https://hedgelayer.ai/docs) → [API Reference](https://hedgelayer.ai/docs/api).
 
 **Base URL:** `https://hedgelayer.ai`
 
@@ -8,22 +8,32 @@ This document describes the API endpoints used by the CLI. There is no official 
 
 ---
 
-## Endpoints
+## Endpoints (per official docs)
 
 ### Assessments
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
+| GET | `/api/assessments?list=true` | Yes | List all assessments. Query: `status?` to filter. |
+| GET | `/api/assessments` | Yes | Get most recent assessment (no `list=true`). |
 | POST | `/api/assessments` | Yes | Create a new assessment. Returns `{ id: string }`. |
-| GET | `/api/assessments` | Yes | List assessments. Query: `list=true`, `status?`. Returns `{ assessments: Assessment[] }`. |
-| GET | `/api/assessments/:id` | Yes | Get assessment by ID. |
+| GET | `/api/assessments/:id` | Yes | Get a specific assessment. |
+| PATCH | `/api/assessments/:id` | Yes | Update an assessment. |
 | DELETE | `/api/assessments/:id` | Yes | Delete an assessment. |
 
-### Chat (Streaming)
+### AI & Hedging
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/chat` | Yes | Stream AI chat. Body: `{ messages, assessmentId? }`. Uses Vercel AI SDK data stream protocol (SSE). |
+| POST | `/api/chat` | Yes | Run AI risk assessment (streaming). Body: `{ messages, assessmentId? }`. Uses Vercel AI SDK data stream protocol (SSE). |
+| POST | `/api/hedge` | Yes | Calculate hedge bundle. Requires risk profile + mapped markets (from search). |
+
+### Markets
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/search` | Yes | Search Polymarket markets. *(Note: may require POST in practice.)* |
+| GET | `/api/orderbook` | No | Get orderbook data. Query: `tokenId` (required), `size?` (for slippage). Returns 404 for invalid token IDs. |
 
 ### Profile
 
@@ -31,11 +41,16 @@ This document describes the API endpoints used by the CLI. There is no official 
 |--------|------|------|-------------|
 | GET | `/api/profile` | Yes | Get current user profile. Returns `{ user_id, handle, created_at, updated_at }`. |
 
-### Markets
+---
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/api/orderbook` | No | Get orderbook for a Polymarket CLOB token. Query: `tokenId` (required), `size?` (for slippage). Returns 404 for invalid/unavailable token IDs. |
+## CLI usage
+
+The CLI uses:
+
+- **`hl assess`** — POST `/api/assessments`, POST `/api/chat` (stream)
+- **`hl hedge`** — POST `/api/chat` with a risk-profile prompt (AI searches markets and builds bundle in one stream; `/api/hedge` expects pre-mapped markets)
+- **`hl markets orderbook`** — GET `/api/orderbook`
+- **`hl profile`** — GET `/api/profile`
 
 ---
 
@@ -73,4 +88,4 @@ This document describes the API endpoints used by the CLI. There is no official 
 ## Notes
 
 - Token IDs for `orderbook` can be obtained from Polymarket's Gamma API: `https://gamma-api.polymarket.com/markets` (see `clobTokenIds` in market objects).
-- The `/api/markets` search endpoint was removed in a prior API change; use the AI assessment flow for market discovery.
+- The legacy `/api/markets` endpoint was removed; `/api/search` is the current search endpoint (see [CHANGELOG](../CHANGELOG.md)).
