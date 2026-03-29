@@ -3,15 +3,15 @@ import readline from "node:readline/promises";
 import chalk from "chalk";
 import { ApiClient } from "../client.js";
 import { parseStream } from "../stream.js";
-import type { Assessment, GlobalOptions } from "../types.js";
+import type { Assessment, MarketBrief, GlobalOptions } from "../types.js";
 import * as out from "../output.js";
 
-export function registerAssessCommands(program: Command): void {
-  const assess = program.command("assess").description("AI-powered risk assessment");
+export function registerResearchCommands(program: Command): void {
+  const research = program.command("research").description("AI-powered market research");
 
-  assess
+  research
     .command("start", { isDefault: true })
-    .description("Start an interactive risk assessment chat")
+    .description("Start an interactive market research session")
     .action(async () => {
       const globalOpts = program.opts<GlobalOptions>();
       const client = new ApiClient(globalOpts);
@@ -19,9 +19,9 @@ export function registerAssessCommands(program: Command): void {
 
       const { id } = await client.post<{ id: string }>("/api/assessments");
 
-      out.heading("Risk Assessment");
+      out.heading("Market Research");
       process.stderr.write(
-        chalk.dim("  Describe the risks you want to hedge. Type /quit to exit.\n\n"),
+        chalk.dim("  Describe a topic or thesis to explore. Type /quit to exit.\n\n"),
       );
 
       let msgCounter = 0;
@@ -54,15 +54,12 @@ export function registerAssessCommands(program: Command): void {
 
             const result = await parseStream(body, {
               onText: (text) => process.stderr.write(text),
-              onToolCall: (name, args) => {
+              onToolCall: (name) => {
                 process.stderr.write(chalk.dim(`\n  [tool: ${name}]\n`));
-                if (globalOpts.verbose) {
-                  process.stderr.write(chalk.dim(`  ${JSON.stringify(args)}\n`));
-                }
               },
-              onToolResult: (name, result) => {
+              onToolResult: (name, toolResult) => {
                 if (globalOpts.verbose) {
-                  process.stderr.write(chalk.dim(`  [result: ${name}] ${JSON.stringify(result).slice(0, 200)}\n`));
+                  process.stderr.write(chalk.dim(`  [result: ${name}] ${JSON.stringify(toolResult).slice(0, 200)}\n`));
                 }
               },
             });
@@ -73,8 +70,8 @@ export function registerAssessCommands(program: Command): void {
               messages.push(uiMsg("assistant", result.assistantText));
             }
 
-            if (result.hedgeBundle) {
-              displayHedgeBundle(result.hedgeBundle, globalOpts);
+            if (result.marketBrief) {
+              displayMarketBrief(result.marketBrief as unknown as MarketBrief, globalOpts);
               break;
             }
           } catch (e) {
@@ -87,9 +84,9 @@ export function registerAssessCommands(program: Command): void {
       }
     });
 
-  assess
+  research
     .command("list")
-    .description("List past assessments")
+    .description("List past research sessions")
     .option("-s, --status <status>", "Filter by status")
     .action(async (cmdOpts: { status?: string }) => {
       const globalOpts = program.opts<GlobalOptions>();
@@ -107,25 +104,25 @@ export function registerAssessCommands(program: Command): void {
       }
 
       if (data.assessments.length === 0) {
-        out.warn("No assessments found.");
+        out.warn("No research sessions found.");
         return;
       }
 
-      out.heading(`Assessments (${data.assessments.length})`);
+      out.heading(`Research Sessions (${data.assessments.length})`);
 
       const rows = data.assessments.map((a) => {
         const status = formatStatus(a.status);
-        const location = a.risk_profile?.location ?? "—";
-        const cost = a.hedge_bundle ? out.currency(a.hedge_bundle.totalCost) : "—";
-        return [a.id.slice(0, 8), status, location, cost, out.relativeTime(a.created_at)];
+        const brief = a.market_brief?.title ?? "—";
+        const markets = a.market_brief ? String(a.market_brief.marketCount) : "—";
+        return [a.id.slice(0, 8), status, out.truncate(brief, 30), markets, out.relativeTime(a.created_at)];
       });
 
-      out.table(rows, ["ID", "Status", "Location", "Cost", "Created"]);
+      out.table(rows, ["ID", "Status", "Brief", "Markets", "Created"]);
     });
 
-  assess
+  research
     .command("show <id>")
-    .description("Show assessment details")
+    .description("Show research session details")
     .action(async (id: string) => {
       const globalOpts = program.opts<GlobalOptions>();
       const client = new ApiClient(globalOpts);
@@ -138,7 +135,7 @@ export function registerAssessCommands(program: Command): void {
         return;
       }
 
-      out.heading("Assessment " + out.dim(assessment.id.slice(0, 8)));
+      out.heading("Research Session " + out.dim(assessment.id.slice(0, 8)));
 
       out.table([
         ["Status", formatStatus(assessment.status)],
@@ -146,32 +143,21 @@ export function registerAssessCommands(program: Command): void {
         ["Updated", new Date(assessment.updated_at).toLocaleString()],
       ]);
 
-      if (assessment.risk_profile) {
-        const rp = assessment.risk_profile;
-        process.stdout.write("\n");
-        out.table([
-          ["Location", rp.location],
-          ["Asset Type", rp.assetType],
-          ["Asset Value", out.currency(rp.assetValue)],
-          ["Risk Types", rp.riskTypes.join(", ")],
-        ]);
-      }
-
-      if (assessment.hedge_bundle) {
-        displayHedgeBundle(assessment.hedge_bundle, globalOpts);
+      if (assessment.market_brief) {
+        displayMarketBrief(assessment.market_brief, globalOpts);
       }
     });
 
-  assess
+  research
     .command("delete <id>")
-    .description("Delete an assessment")
+    .description("Delete a research session")
     .action(async (id: string) => {
       const globalOpts = program.opts<GlobalOptions>();
       const client = new ApiClient(globalOpts);
       requireAuth(client);
 
       await client.delete(`/api/assessments/${id}`);
-      out.success("Assessment deleted.");
+      out.success("Research session deleted.");
     });
 }
 
@@ -195,34 +181,41 @@ function formatStatus(status: string): string {
   }
 }
 
-function displayHedgeBundle(
-  bundle: { positions: Array<Record<string, unknown>>; totalCost: number; totalCoverage: number; hedgeEfficiency: number; assetValue: number },
-  globalOpts: GlobalOptions,
-): void {
+function displayMarketBrief(brief: MarketBrief, globalOpts: GlobalOptions): void {
   if (globalOpts.json) {
-    out.json(bundle);
+    out.json(brief);
     return;
   }
 
-  out.heading("Hedge Bundle");
+  out.heading("Market Brief");
 
-  out.table([
-    ["Asset Value", out.currency(bundle.assetValue)],
-    ["Total Cost", out.currency(bundle.totalCost)],
-    ["Total Coverage", out.currency(bundle.totalCoverage)],
-    ["Efficiency", out.percent(bundle.hedgeEfficiency)],
-  ]);
+  process.stdout.write("  " + chalk.bold(brief.title) + "\n\n");
+  process.stdout.write("  " + chalk.italic(brief.thesis) + "\n");
 
-  if (bundle.positions.length > 0) {
-    process.stdout.write("\n" + chalk.bold("  Positions") + "\n\n");
-    const rows = bundle.positions.map((p) => {
-      const market = (p.market as Record<string, string>)?.question ?? "Unknown";
-      const cost = out.currency(Number(p.estimatedCost ?? 0));
-      const payout = out.currency(Number(p.potentialPayout ?? 0));
-      const price = Number(p.yesPrice ?? 0).toFixed(2);
-      const capped = p.wasCapped ? chalk.yellow(" (capped)") : "";
-      return [out.truncate(market, 40), price, cost, payout + capped];
+  if (brief.markets.length > 0) {
+    process.stdout.write("\n" + chalk.bold("  Markets") + "\n\n");
+    const rows = brief.markets.map((m) => {
+      const prob = out.percent(m.yesPrice);
+      const signals = m.signals.length > 0 ? m.signals.join(", ") : "—";
+      const liq = m.liquidity ? out.currency(m.liquidity) : "—";
+      return [out.truncate(m.question, 40), prob, signals, liq];
     });
-    out.table(rows, ["Market", "YES", "Cost", "Payout"]);
+    out.table(rows, ["Market", "Prob", "Signals", "Liq"]);
+
+    process.stdout.write("\n");
+    for (const m of brief.markets) {
+      process.stdout.write("  " + chalk.dim("▸ ") + out.truncate(m.question, 50) + "\n");
+      process.stdout.write("    " + chalk.dim("Causal link: ") + m.causalLink + "\n");
+      process.stdout.write("    " + chalk.dim("Polymarket: ") + m.polymarketUrl + "\n");
+    }
   }
+
+  if (brief.gaps.length > 0) {
+    process.stdout.write("\n" + chalk.bold("  Coverage Gaps") + "\n\n");
+    for (const gap of brief.gaps) {
+      process.stdout.write("  " + chalk.yellow("▸") + " " + gap + "\n");
+    }
+  }
+
+  process.stdout.write("\n  " + chalk.dim(`${brief.marketCount} markets · ${brief.gaps.length} coverage gaps`) + "\n");
 }

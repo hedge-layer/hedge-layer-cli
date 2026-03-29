@@ -1,21 +1,29 @@
 // Domain types mirrored from the Hedge Layer web app.
 // Only the subset needed for CLI display and API interaction.
 
-export type RiskType =
-  | "flood"
-  | "hurricane"
-  | "wildfire"
-  | "earthquake"
-  | "storm"
-  | "tornado";
+export interface MarketBriefMarket {
+  question: string;
+  slug: string;
+  eventSlug?: string;
+  yesPrice: number;
+  relevance: number;
+  causalLink: string;
+  signals: string[];
+  polymarketUrl: string;
+  qualityScore?: number;
+  volume?: number;
+  liquidity?: number;
+  endDate?: string;
+}
 
-export type AssetType = "residential" | "commercial" | "vehicle" | "other";
-
-export interface RiskProfile {
-  location: string;
-  assetType: AssetType;
-  riskTypes: RiskType[];
-  assetValue: number;
+export interface MarketBrief {
+  title: string;
+  thesis: string;
+  markets: MarketBriefMarket[];
+  watchlist: string[];
+  gaps: string[];
+  marketCount: number;
+  createdAt: string;
 }
 
 export interface Market {
@@ -33,35 +41,6 @@ export interface Market {
   closed: boolean;
   image?: string;
   description?: string;
-}
-
-export interface MappedMarket {
-  market: Market;
-  correlationScore: number;
-  matchReason: string;
-  matchedRiskType: RiskType;
-}
-
-export interface HedgePosition {
-  market: Market;
-  correlationWeight: number;
-  yesPrice: number;
-  positionSize: number;
-  estimatedCost: number;
-  potentialPayout: number;
-  coverageExplanation: string;
-  slippageEstimate?: number;
-  effectiveCost?: number;
-  liquidityDepth?: number;
-  wasCapped?: boolean;
-}
-
-export interface HedgeBundle {
-  positions: HedgePosition[];
-  totalCost: number;
-  totalCoverage: number;
-  hedgeEfficiency: number;
-  assetValue: number;
 }
 
 export interface OrderbookLevel {
@@ -85,8 +64,7 @@ export interface Assessment {
   id: string;
   user_id: string;
   status: string;
-  risk_profile: RiskProfile | null;
-  hedge_bundle: HedgeBundle | null;
+  market_brief: MarketBrief | null;
   messages: unknown[];
   metadata: Record<string, unknown> | null;
   created_at: string;
