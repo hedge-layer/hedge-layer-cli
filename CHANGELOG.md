@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] - 2026-03-29
+
+### Breaking Changes
+
+- **Rename `hl assess` to `hl research`.** The CLI now reflects the updated product thesis: prediction market intelligence and information flow, not risk assessment and hedging.
+- **Remove `hl hedge` command.** Hedge bundle calculation has been removed. The product focus is Market Briefs — structured intelligence with causal reasoning and coverage gaps.
+- **Remove hedge/risk types.** `RiskProfile`, `HedgeBundle`, `HedgePosition`, `MappedMarket` types are replaced by `MarketBrief` and `MarketBriefMarket`.
+
+### Added
+
+- `hl research` — interactive AI-powered market research sessions that produce Market Briefs
+- `hl research list` — list past research sessions with brief titles and market counts
+- `hl research show <id>` — display session details including full Market Brief (title, thesis, markets with causal links, coverage gaps)
+- Market Brief display in terminal: title, thesis, markets table (prob, signals, liquidity), causal link detail, coverage gaps
+
+### Changed
+
+- CLI description: "hedge real-world risks on Polymarket" → "prediction market intelligence from the terminal"
+- Stream parser detects `buildMarketBrief` tool output instead of `buildHedgeBundle`
+- Assessment type updated: `market_brief` field replaces `risk_profile` and `hedge_bundle`
+
+### Unchanged
+
+- `hl auth login/status/logout` — no changes
+- `hl markets orderbook` — no changes
+- `hl profile` — no changes
+- Global options (`--json`, `--api-url`, `--token`, `--verbose`, `--no-color`) — no changes
+
 ## [0.2.0] - 2026-03-01
 
 ### Breaking Changes
@@ -29,5 +57,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Global options: `--json`, `--api-url`, `--token`, `--verbose`, `--no-color`
 - Token storage in `~/.hedgelayer/config.json`
 
+[1.0.0]: https://github.com/hedgelayer/cli/releases/tag/v1.0.0
 [0.2.0]: https://github.com/hedgelayer/cli/releases/tag/v0.2.0
 [0.1.0]: https://github.com/hedgelayer/cli/releases/tag/v0.1.0

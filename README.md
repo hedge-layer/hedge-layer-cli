@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/@hedge-layer/cli)](https://www.npmjs.com/package/@hedge-layer/cli)
 [![license](https://img.shields.io/github/license/hedge-layer/hedge-layer-cli)](LICENSE)
 
-Command-line interface for [Hedge Layer](https://hedgelayer.ai) — hedge real-world risks on Polymarket prediction markets.
+Command-line interface for [Hedge Layer](https://hedgelayer.ai) — prediction market intelligence from the terminal.
 
 ## Install
 
@@ -20,8 +20,8 @@ Requires Node.js 22 or later.
 # 2. Authenticate the CLI
 hl auth login
 
-# 3. Start an interactive risk assessment
-hl assess
+# 3. Start an interactive research session
+hl research
 ```
 
 ## Authentication
@@ -37,10 +37,29 @@ hl auth logout     # Remove stored token
 You can also pass a token inline for CI/scripts:
 
 ```bash
-hl --token hl_abc123... assess list
+hl --token hl_abc123... research list
 ```
 
 ## Commands
+
+### Research
+
+AI-powered market research sessions. Describe a topic or thesis, and the AI researches current events, discovers relevant prediction markets, and synthesizes a structured Market Brief.
+
+```bash
+# Start an interactive research session
+hl research
+
+# List past research sessions
+hl research list
+hl research list --status completed
+
+# View a specific session and its Market Brief
+hl research show <id>
+
+# Delete a session
+hl research delete <id>
+```
 
 ### Markets
 
@@ -50,42 +69,6 @@ Polymarket orderbook tools.
 # View orderbook for a specific CLOB token
 hl markets orderbook <tokenId>
 hl markets orderbook <tokenId> --size 1000
-```
-
-### Assess
-
-Run AI-powered risk assessments interactively.
-
-```bash
-# Start an interactive chat assessment
-hl assess
-
-# List past assessments
-hl assess list
-hl assess list --status completed
-
-# View a specific assessment
-hl assess show <id>
-
-# Delete an assessment
-hl assess delete <id>
-```
-
-### Hedge
-
-Calculate hedge positions from a risk profile JSON file.
-
-```bash
-# From a file
-hl hedge profile.json
-
-# From stdin
-echo '{
-  "location": "33109",
-  "assetType": "residential",
-  "riskTypes": ["hurricane", "flood"],
-  "assetValue": 500000
-}' | hl hedge -
 ```
 
 ### Profile
@@ -109,7 +92,7 @@ hl profile
 Every command supports `--json` for pipe-friendly output:
 
 ```bash
-hl --json assess list | jq '.[0].id'
+hl --json research list | jq '.[0].id'
 ```
 
 ## Development
@@ -122,7 +105,7 @@ npm run build        # Build with tsup
 npm run dev          # Watch mode
 
 # Test against local dev server
-node dist/index.mjs --api-url http://localhost:3000 assess list
+node dist/index.mjs --api-url http://localhost:3000 research list
 ```
 
 ## Publishing

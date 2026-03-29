@@ -24,7 +24,7 @@ describe("parseStream", () => {
     const result = await parseStream(stream);
     expect(result.assistantText).toBe("Hello world");
     expect(result.toolCalls).toEqual([]);
-    expect(result.hedgeBundle).toBeNull();
+    expect(result.marketBrief).toBeNull();
   });
 
   it("invokes onText callback for each delta", async () => {
@@ -61,24 +61,26 @@ describe("parseStream", () => {
     expect(resultNames).toEqual(["searchMarkets"]);
   });
 
-  it("detects hedge bundle from buildHedgeBundle tool output", async () => {
-    const bundle = {
-      positions: [{ market: { question: "Will it flood?" } }],
-      totalCost: 500,
-      totalCoverage: 10000,
-      hedgeEfficiency: 0.8,
-      assetValue: 50000,
+  it("detects market brief from buildMarketBrief tool output", async () => {
+    const brief = {
+      title: "Hurricane Season Intelligence",
+      thesis: "Markets are pricing moderate hurricane risk for 2026.",
+      markets: [{ question: "Will a Category 4+ hurricane hit the US in 2026?" }],
+      gaps: ["No direct market for Southeast US flooding"],
+      marketCount: 1,
+      createdAt: "2026-03-29T00:00:00Z",
     };
 
     const stream = makeStream([
-      'data: {"type":"tool-input-start","toolCallId":"tc2","toolName":"buildHedgeBundle"}',
-      'data: {"type":"tool-input-available","toolCallId":"tc2","toolName":"buildHedgeBundle","input":{}}',
-      `data: {"type":"tool-output-available","toolCallId":"tc2","output":${JSON.stringify(bundle)}}`,
+      'data: {"type":"tool-input-start","toolCallId":"tc2","toolName":"buildMarketBrief"}',
+      'data: {"type":"tool-input-available","toolCallId":"tc2","toolName":"buildMarketBrief","input":{}}',
+      `data: {"type":"tool-output-available","toolCallId":"tc2","output":${JSON.stringify(brief)}}`,
     ]);
 
     const result = await parseStream(stream);
-    expect(result.hedgeBundle).not.toBeNull();
-    expect(result.hedgeBundle!.totalCost).toBe(500);
+    expect(result.marketBrief).not.toBeNull();
+    expect(result.marketBrief!.title).toBe("Hurricane Season Intelligence");
+    expect(result.marketBrief!.marketCount).toBe(1);
   });
 
   it("throws on error events", async () => {

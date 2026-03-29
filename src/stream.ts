@@ -21,7 +21,7 @@ export interface StreamCallbacks {
 export interface StreamResult {
   assistantText: string;
   toolCalls: Array<{ name: string; args: unknown }>;
-  hedgeBundle: Record<string, unknown> | null;
+  marketBrief: Record<string, unknown> | null;
 }
 
 export async function parseStream(
@@ -35,7 +35,7 @@ export async function parseStream(
   let assistantText = "";
   const toolCalls: Array<{ name: string; args: unknown }> = [];
   const activeToolCalls = new Map<string, { name: string; argStr: string }>();
-  let hedgeBundle: Record<string, unknown> | null = null;
+  let marketBrief: Record<string, unknown> | null = null;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -108,8 +108,8 @@ export async function parseStream(
           const active = activeToolCalls.get(id);
           if (active) {
             callbacks.onToolResult?.(active.name, msg.output);
-            if (active.name === "buildHedgeBundle" && isHedgeBundle(msg.output)) {
-              hedgeBundle = msg.output as Record<string, unknown>;
+            if (active.name === "buildMarketBrief" && isMarketBrief(msg.output)) {
+              marketBrief = msg.output as Record<string, unknown>;
             }
             activeToolCalls.delete(id);
           }
@@ -125,14 +125,14 @@ export async function parseStream(
     if (done) break;
   }
 
-  return { assistantText, toolCalls, hedgeBundle };
+  return { assistantText, toolCalls, marketBrief };
 }
 
-function isHedgeBundle(val: unknown): boolean {
+function isMarketBrief(val: unknown): boolean {
   return (
     val !== null &&
     typeof val === "object" &&
-    "positions" in (val as Record<string, unknown>) &&
-    "totalCost" in (val as Record<string, unknown>)
+    "title" in (val as Record<string, unknown>) &&
+    "markets" in (val as Record<string, unknown>)
   );
 }

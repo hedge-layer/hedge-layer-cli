@@ -1,7 +1,7 @@
 {
   "name": "@hedge-layer/cli",
-  "version": "0.2.0",
-  "description": "CLI for Hedge Layer — hedge real-world risks on Polymarket",
+  "version": "1.0.0",
+  "description": "CLI for Hedge Layer — prediction market intelligence from the terminal",
   "type": "module",
   "bin": {
     "hl": "dist/index.mjs"
@@ -21,10 +21,10 @@
     "node": ">=22"
   },
   "keywords": [
-    "hedge",
     "polymarket",
     "prediction-markets",
-    "risk",
+    "market-intelligence",
+    "market-brief",
     "cli"
   ],
   "publishConfig": {
