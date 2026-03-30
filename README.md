@@ -47,8 +47,12 @@ hl --token hl_abc123... research list
 AI-powered market research sessions. Describe a topic or thesis, and the AI researches current events, discovers relevant prediction markets, and synthesizes a structured Market Brief.
 
 ```bash
-# Start an interactive research session
+# Start an interactive research session (Q&A)
 hl research
+
+# Run research on a topic and get the Market Brief as JSON
+hl research run "US recession signals and Fed rate decisions"
+hl research run "hurricane season impact on Florida" | jq '.markets'
 
 # List past research sessions
 hl research list
@@ -60,6 +64,8 @@ hl research show <id>
 # Delete a session
 hl research delete <id>
 ```
+
+The `run` subcommand is the non-interactive counterpart to `hl research`. It sends a single query, runs the full research pipeline (Perplexity research, Polymarket discovery, brief synthesis), and outputs the final Market Brief as JSON to stdout — ideal for scripts, pipelines, and programmatic use.
 
 ### Markets
 
