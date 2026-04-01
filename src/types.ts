@@ -100,3 +100,21 @@ export interface GlobalOptions {
   token?: string;
   verbose?: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Brief API request/response
+// ---------------------------------------------------------------------------
+
+export interface BriefRequestFilters {
+  minVolume?: number;
+  maxYesPrice?: number;
+  tags?: string[];
+}
+
+export interface BriefRequest {
+  query: string;
+  location?: string;
+  timeHorizon?: string;
+  filters?: BriefRequestFilters;
+  stream?: boolean;
+}

@@ -136,3 +136,82 @@ function isMarketBrief(val: unknown): boolean {
     "markets" in (val as Record<string, unknown>)
   );
 }
+
+// ---------------------------------------------------------------------------
+// NDJSON stream parser (for POST /api/brief)
+// ---------------------------------------------------------------------------
+
+export interface NdjsonCallbacks {
+  onProgress?: (step: string, message: string) => void;
+}
+
+export interface NdjsonBriefResult {
+  brief: Record<string, unknown> | null;
+  error: { code: string; message: string } | null;
+}
+
+/**
+ * Parses an NDJSON stream from the /api/brief endpoint.
+ *
+ * Each line is a JSON object with a `type` field:
+ *   progress: { type, step, message }
+ *   brief:    { type, data: MarketBrief }
+ *   error:    { type, code, message }
+ */
+export async function parseNdjsonStream(
+  body: ReadableStream<Uint8Array>,
+  callbacks: NdjsonCallbacks = {},
+): Promise<NdjsonBriefResult> {
+  const decoder = new TextDecoder();
+  const reader = body.getReader();
+
+  let buffer = "";
+  let brief: Record<string, unknown> | null = null;
+  let error: { code: string; message: string } | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (!done) {
+      buffer += decoder.decode(value, { stream: true });
+    }
+
+    const lines = buffer.split("\n");
+    buffer = done ? "" : (lines.pop() ?? "");
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      let msg: Record<string, unknown>;
+      try {
+        msg = JSON.parse(trimmed);
+      } catch {
+        continue;
+      }
+
+      const type = msg.type as string;
+
+      switch (type) {
+        case "progress": {
+          callbacks.onProgress?.(msg.step as string, msg.message as string);
+          break;
+        }
+        case "brief": {
+          brief = msg.data as Record<string, unknown>;
+          break;
+        }
+        case "error": {
+          error = {
+            code: msg.code as string,
+            message: msg.message as string,
+          };
+          break;
+        }
+      }
+    }
+
+    if (done) break;
+  }
+
+  return { brief, error };
+}

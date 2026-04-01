@@ -121,6 +121,25 @@ export class ApiClient {
     }
     return res.body;
   }
+
+  async streamNdjson(path: string, body: unknown): Promise<ReadableStream<Uint8Array>> {
+    this.log("POST (ndjson)", path);
+    const res = await fetch(`${this.baseUrl}${path}`, {
+      method: "POST",
+      headers: this.headers({ Accept: "application/x-ndjson" }),
+      body: JSON.stringify(body),
+    });
+    this.log("POST (ndjson)", path, res.status);
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new ApiError(res.status, text);
+    }
+    if (!res.body) {
+      throw new ApiError(0, "No response body for stream");
+    }
+    return res.body;
+  }
 }
 
 export class ApiError extends Error {

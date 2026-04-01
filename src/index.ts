@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { registerAuthCommands } from "./commands/auth.js";
+import { registerBriefCommands } from "./commands/brief.js";
 import { registerMarketCommands } from "./commands/markets.js";
 import { registerProfileCommand } from "./commands/profile.js";
 import { registerResearchCommands } from "./commands/research.js";
@@ -18,6 +19,7 @@ program
   .option("--no-color", "Disable colored output");
 
 registerAuthCommands(program);
+registerBriefCommands(program);
 registerMarketCommands(program);
 registerProfileCommand(program);
 registerResearchCommands(program);
