@@ -94,16 +94,6 @@ hl research delete <id>
 
 For non-interactive, single-shot brief generation, use `hl brief` — it uses a dedicated API endpoint optimized for programmatic use.
 
-### Markets
-
-Polymarket orderbook tools.
-
-```bash
-# View orderbook for a specific CLOB token
-hl markets orderbook <tokenId>
-hl markets orderbook <tokenId> --size 1000
-```
-
 ### Profile
 
 ```bash
