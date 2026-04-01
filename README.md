@@ -81,10 +81,6 @@ AI-powered interactive research sessions. Describe a topic or thesis, and the AI
 # Start an interactive research session (Q&A)
 hl research
 
-# Run research on a topic and get the Market Brief as JSON
-hl research run "US recession signals and Fed rate decisions"
-hl research run "hurricane season impact on Florida" | jq '.markets'
-
 # List past research sessions
 hl research list
 hl research list --status completed
@@ -96,9 +92,7 @@ hl research show <id>
 hl research delete <id>
 ```
 
-The `run` subcommand is the non-interactive counterpart to `hl research`. It sends a single query, runs the full research pipeline, and outputs the final Market Brief as JSON to stdout.
-
-For non-interactive, single-shot brief generation, prefer `hl brief` — it uses a dedicated API endpoint optimized for programmatic use.
+For non-interactive, single-shot brief generation, use `hl brief` — it uses a dedicated API endpoint optimized for programmatic use.
 
 ### Markets
 
