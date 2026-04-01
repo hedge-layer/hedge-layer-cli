@@ -43,23 +43,6 @@ export interface Market {
   description?: string;
 }
 
-export interface OrderbookLevel {
-  price: string;
-  size: string;
-}
-
-export interface Orderbook {
-  bids: OrderbookLevel[];
-  asks: OrderbookLevel[];
-}
-
-export interface SlippageResult {
-  avgPrice: number;
-  worstPrice: number;
-  slippage: number;
-  fillableSize: number;
-}
-
 export interface Assessment {
   id: string;
   user_id: string;
