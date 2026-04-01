@@ -20,7 +20,10 @@ Requires Node.js 22 or later.
 # 2. Authenticate the CLI
 hl auth login
 
-# 3. Start an interactive research session
+# 3. Generate a Market Brief
+hl brief "US China trade war tariffs"
+
+# 4. Or start an interactive research session
 hl research
 ```
 
@@ -42,12 +45,40 @@ hl --token hl_abc123... research list
 
 ## Commands
 
-### Research
+### Brief
 
-AI-powered market research sessions. Describe a topic or thesis, and the AI researches current events, discovers relevant prediction markets, and synthesizes a structured Market Brief.
+Generate a Market Brief directly from a topic — no Q&A, no interactive session. The AI researches current events, discovers relevant prediction markets, and synthesizes a structured brief with causal reasoning and coverage gaps.
 
 ```bash
-# Start an interactive research session
+# Generate a brief (streams progress to stderr, brief to stdout)
+hl brief "US China trade war tariffs"
+hl brief "hurricane season impact on Florida" --location "US Southeast" --time-horizon "6 months"
+
+# Pipe the brief as JSON
+hl --json brief "crypto regulation 2026" | jq '.markets'
+
+# Filter by tags and volume
+hl brief "energy policy" --tags "geopolitics,energy" --min-volume 10000
+
+# Disable streaming (block until complete)
+hl brief "AI regulation in Europe" --no-stream
+```
+
+| Option | Description |
+|--------|-------------|
+| `-l, --location <loc>` | Geographic context (e.g. `"Middle East"`, `"US"`) |
+| `-t, --time-horizon <h>` | Time frame (e.g. `"3 months"`, `"2026"`) |
+| `--tags <tags>` | Comma-separated focus area tags (e.g. `"geopolitics,energy"`) |
+| `--min-volume <n>` | Minimum market volume in USD |
+| `--max-yes-price <n>` | Maximum YES price (0-1) |
+| `--no-stream` | Disable streaming — block until complete |
+
+### Research
+
+AI-powered interactive research sessions. Describe a topic or thesis, and the AI researches current events, discovers relevant prediction markets, and synthesizes a structured Market Brief through a multi-turn conversation.
+
+```bash
+# Start an interactive research session (Q&A)
 hl research
 
 # List past research sessions
@@ -60,6 +91,8 @@ hl research show <id>
 # Delete a session
 hl research delete <id>
 ```
+
+For non-interactive, single-shot brief generation, use `hl brief` — it uses a dedicated API endpoint optimized for programmatic use.
 
 ### Markets
 

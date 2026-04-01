@@ -3,7 +3,7 @@ import readline from "node:readline/promises";
 import chalk from "chalk";
 import { ApiClient } from "../client.js";
 import { parseStream } from "../stream.js";
-import type { Assessment, MarketBrief, GlobalOptions } from "../types.js";
+import type { Assessment, MarketBrief, GlobalOptions, ResearchResponse } from "../types.js";
 import * as out from "../output.js";
 
 export function registerResearchCommands(program: Command): void {
@@ -81,6 +81,30 @@ export function registerResearchCommands(program: Command): void {
         }
       } finally {
         rl.close();
+      }
+    });
+
+  research
+    .command("run <query>")
+    .description("Run research on a topic and return the final brief as JSON")
+    .action(async (query: string) => {
+      const globalOpts = program.opts<GlobalOptions>();
+      const client = new ApiClient(globalOpts);
+      requireAuth(client);
+
+      process.stderr.write(chalk.dim(`  Researching "${out.truncate(query, 60)}"...\n`));
+      const startTime = Date.now();
+
+      const result = await client.post<ResearchResponse>("/api/research", { query });
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      process.stderr.write(chalk.dim(`  Done (${elapsed}s)\n\n`));
+
+      if (result.brief) {
+        out.json(result.brief);
+      } else {
+        process.stderr.write(chalk.yellow("No market brief was produced.\n"));
+        out.json(result);
       }
     });
 

@@ -71,6 +71,18 @@ export interface Assessment {
   updated_at: string;
 }
 
+export interface ResearchResponse {
+  assessmentId: string;
+  brief: MarketBrief | null;
+  text: string | null;
+  metadata: {
+    model: string;
+    stepsUsed: number;
+    toolsUsed: string[];
+    durationMs: number;
+  };
+}
+
 export interface UserProfile {
   user_id: string;
   handle: string;
@@ -87,4 +99,22 @@ export interface GlobalOptions {
   apiUrl?: string;
   token?: string;
   verbose?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Brief API request/response
+// ---------------------------------------------------------------------------
+
+export interface BriefRequestFilters {
+  minVolume?: number;
+  maxYesPrice?: number;
+  tags?: string[];
+}
+
+export interface BriefRequest {
+  query: string;
+  location?: string;
+  timeHorizon?: string;
+  filters?: BriefRequestFilters;
+  stream?: boolean;
 }

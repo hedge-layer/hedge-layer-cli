@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-04-01
+
+### Added
+
+- `hl brief <query>` — generate a Market Brief directly from a topic, no interactive session required. Streams progress to stderr and outputs the final brief to stdout.
+- Brief command options: `--location`, `--time-horizon`, `--tags`, `--min-volume`, `--max-yes-price`, `--no-stream`.
+- NDJSON streaming support via new `streamNdjson` method on `ApiClient` and `parseNdjsonStream` parser — consumes the `POST /api/brief` endpoint.
+- `BriefRequest` and `BriefRequestFilters` types for the brief API request schema.
+
+### Changed
+
+- Quick Start in README now highlights `hl brief` as the primary command alongside `hl research`.
+
 ## [1.0.0] - 2026-03-29
 
 ### Breaking Changes
@@ -57,6 +70,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Global options: `--json`, `--api-url`, `--token`, `--verbose`, `--no-color`
 - Token storage in `~/.hedgelayer/config.json`
 
+[1.1.0]: https://github.com/hedgelayer/cli/releases/tag/v1.1.0
 [1.0.0]: https://github.com/hedgelayer/cli/releases/tag/v1.0.0
 [0.2.0]: https://github.com/hedgelayer/cli/releases/tag/v0.2.0
 [0.1.0]: https://github.com/hedgelayer/cli/releases/tag/v0.1.0
