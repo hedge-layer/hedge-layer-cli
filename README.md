@@ -128,30 +128,6 @@ Every command supports `--json` for pipe-friendly output:
 hl --json research list | jq '.[0].id'
 ```
 
-## Development
-
-```bash
-git clone https://github.com/hedge-layer/hedge-layer-cli.git
-cd hedge-layer-cli
-npm install
-npm run build        # Build with tsup
-npm run dev          # Watch mode
-
-# Test against local dev server
-node dist/index.mjs --api-url http://localhost:3000 research list
-```
-
-## Publishing
-
-Releases are automated via GitHub Actions. To publish a new version:
-
-```bash
-npm version patch    # or minor / major
-git push --tags
-```
-
-The workflow builds and publishes to npm when a version tag (`v*`) is pushed. Authentication uses npm's OIDC trusted publishers — no secrets required.
-
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for release history.
