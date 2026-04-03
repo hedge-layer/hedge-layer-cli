@@ -22,6 +22,7 @@ export interface StreamResult {
   assistantText: string;
   toolCalls: Array<{ name: string; args: unknown }>;
   marketBrief: Record<string, unknown> | null;
+  feedResult: Record<string, unknown> | null;
 }
 
 export async function parseStream(
@@ -36,6 +37,7 @@ export async function parseStream(
   const toolCalls: Array<{ name: string; args: unknown }> = [];
   const activeToolCalls = new Map<string, { name: string; argStr: string }>();
   let marketBrief: Record<string, unknown> | null = null;
+  let feedResult: Record<string, unknown> | null = null;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -111,6 +113,9 @@ export async function parseStream(
             if (active.name === "buildMarketBrief" && isMarketBrief(msg.output)) {
               marketBrief = msg.output as Record<string, unknown>;
             }
+            if (active.name === "getFeed" && isFeedResult(msg.output)) {
+              feedResult = msg.output as Record<string, unknown>;
+            }
             activeToolCalls.delete(id);
           }
           break;
@@ -125,7 +130,7 @@ export async function parseStream(
     if (done) break;
   }
 
-  return { assistantText, toolCalls, marketBrief };
+  return { assistantText, toolCalls, marketBrief, feedResult };
 }
 
 function isMarketBrief(val: unknown): boolean {
@@ -134,6 +139,15 @@ function isMarketBrief(val: unknown): boolean {
     typeof val === "object" &&
     "title" in (val as Record<string, unknown>) &&
     "markets" in (val as Record<string, unknown>)
+  );
+}
+
+function isFeedResult(val: unknown): boolean {
+  return (
+    val !== null &&
+    typeof val === "object" &&
+    "markets" in (val as Record<string, unknown>) &&
+    "sortedBy" in (val as Record<string, unknown>)
   );
 }
 

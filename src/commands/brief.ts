@@ -14,7 +14,6 @@ export function registerBriefCommands(program: Command): void {
     .option("--tags <tags>", "Comma-separated focus area tags (e.g. 'geopolitics,energy')")
     .option("--min-volume <n>", "Minimum market volume in USD", parseFloat)
     .option("--max-yes-price <n>", "Maximum YES price (0-1)", parseFloat)
-    .option("--no-stream", "Disable streaming — block until complete")
     .action(async (query: string, cmdOpts: BriefCmdOpts) => {
       const globalOpts = program.opts<GlobalOptions>();
       const client = new ApiClient(globalOpts);
@@ -26,14 +25,10 @@ export function registerBriefCommands(program: Command): void {
         ...(cmdOpts.location && { location: cmdOpts.location }),
         ...(cmdOpts.timeHorizon && { timeHorizon: cmdOpts.timeHorizon }),
         ...(filters && { filters }),
-        stream: cmdOpts.stream !== false,
+        stream: true,
       };
 
-      if (body.stream) {
-        await runStreaming(client, body, globalOpts);
-      } else {
-        await runBlocking(client, body, globalOpts);
-      }
+      await runStreaming(client, body, globalOpts);
     });
 }
 
@@ -47,7 +42,6 @@ interface BriefCmdOpts {
   tags?: string;
   minVolume?: number;
   maxYesPrice?: number;
-  stream?: boolean;
 }
 
 function buildFilters(opts: BriefCmdOpts): BriefRequestFilters | undefined {
@@ -90,22 +84,6 @@ async function runStreaming(client: ApiClient, body: BriefRequest, globalOpts: G
 
   process.stderr.write(chalk.dim(`  Done (${elapsed}s)\n\n`));
   displayBrief(result.brief as unknown as MarketBrief, globalOpts);
-}
-
-// ---------------------------------------------------------------------------
-// Blocking mode (--no-stream)
-// ---------------------------------------------------------------------------
-
-async function runBlocking(client: ApiClient, body: BriefRequest, globalOpts: GlobalOptions): Promise<void> {
-  const startTime = Date.now();
-  process.stderr.write(chalk.dim(`  Generating brief for "${out.truncate(body.query, 50)}"...\n`));
-
-  const brief = await client.post<MarketBrief>("/api/brief", body);
-
-  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-  process.stderr.write(chalk.dim(`  Done (${elapsed}s)\n\n`));
-
-  displayBrief(brief, globalOpts);
 }
 
 // ---------------------------------------------------------------------------
