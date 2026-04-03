@@ -111,4 +111,42 @@ describe("parseStream", () => {
     const result = await parseStream(stream);
     expect(result.assistantText).toBe("fine");
   });
+
+  it("detects feed result from getFeed tool output", async () => {
+    const feed = {
+      totalScanned: 1500,
+      totalAfterFilter: 1200,
+      marketsReturned: 3,
+      sortedBy: "volume",
+      preset: "default",
+      markets: [
+        { rank: 1, score: 85.2, question: "Will X happen?", slug: "will-x", yesPrice: 0.65, volume24h: 500000 },
+        { rank: 2, score: 72.1, question: "Will Y happen?", slug: "will-y", yesPrice: 0.32, volume24h: 250000 },
+        { rank: 3, score: 60.5, question: "Will Z happen?", slug: "will-z", yesPrice: 0.80, volume24h: 100000 },
+      ],
+    };
+
+    const stream = makeStream([
+      'data: {"type":"tool-input-start","toolCallId":"tc3","toolName":"getFeed"}',
+      'data: {"type":"tool-input-available","toolCallId":"tc3","toolName":"getFeed","input":{"sortBy":"volume"}}',
+      `data: {"type":"tool-output-available","toolCallId":"tc3","output":${JSON.stringify(feed)}}`,
+    ]);
+
+    const result = await parseStream(stream);
+    expect(result.feedResult).not.toBeNull();
+    expect(result.feedResult!.sortedBy).toBe("volume");
+    expect(result.feedResult!.totalScanned).toBe(1500);
+    expect((result.feedResult!.markets as unknown[]).length).toBe(3);
+    expect(result.marketBrief).toBeNull();
+  });
+
+  it("returns null feedResult when no getFeed tool is called", async () => {
+    const stream = makeStream([
+      'data: {"type":"text-delta","delta":"No feed here"}',
+      "data: [DONE]",
+    ]);
+
+    const result = await parseStream(stream);
+    expect(result.feedResult).toBeNull();
+  });
 });

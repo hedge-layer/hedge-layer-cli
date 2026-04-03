@@ -73,6 +73,46 @@ export interface UserProfile {
   updated_at: string;
 }
 
+// ---------------------------------------------------------------------------
+// Feed result — matches getFeed tool output from the web agent
+// ---------------------------------------------------------------------------
+
+export interface FeedResultMarket {
+  rank: number;
+  score: number;
+  question: string;
+  slug: string;
+  eventSlug: string;
+  yesPrice: number;
+  noPrice: number;
+  volume24h: number;
+  liquidity: number;
+  spread: number;
+  oneDayPriceChange: number;
+  rewardsDailyRate: number;
+  endDate: string;
+  polymarketUrl: string;
+  components: {
+    volume: number;
+    liquidity: number;
+    movement: number;
+    spread: number;
+    recency: number;
+    extremity: number;
+    rewards: number;
+  };
+}
+
+export interface FeedResult {
+  totalScanned: number;
+  totalAfterFilter: number;
+  marketsReturned: number;
+  sortedBy: string;
+  preset: string;
+  markets: FeedResultMarket[];
+  error?: string;
+}
+
 export interface ApiError {
   error: string;
 }
@@ -99,5 +139,5 @@ export interface BriefRequest {
   location?: string;
   timeHorizon?: string;
   filters?: BriefRequestFilters;
-  stream?: boolean;
+  stream: true;
 }
