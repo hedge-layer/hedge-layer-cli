@@ -11,9 +11,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      # v6 runs on Node 24 (avoids deprecated Node 20 action runtime)
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
