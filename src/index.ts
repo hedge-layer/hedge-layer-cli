@@ -4,6 +4,7 @@ import { registerBriefCommands } from "./commands/brief.js";
 
 import { registerProfileCommand } from "./commands/profile.js";
 import { registerResearchCommands } from "./commands/research.js";
+import { registerFeedCommand } from "./commands/feed.js";
 import * as out from "./output.js";
 
 const program = new Command();
@@ -23,6 +24,7 @@ registerBriefCommands(program);
 
 registerProfileCommand(program);
 registerResearchCommands(program);
+registerFeedCommand(program);
 
 program.hook("preAction", (_thisCommand, actionCommand) => {
   const opts = program.opts();

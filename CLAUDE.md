@@ -32,6 +32,7 @@ Run the CLI after build: `node dist/index.mjs [options] [command]`
 | `hl research list` | List past sessions |
 | `hl research show <id>` | Display session details |
 | `hl research delete <id>` | Delete session |
+| `hl feed [lp-opportunity|liquid-new-or-long]` | Polymarket feed (`GET /api/feed`); optional screening shorthand, or flags only |
 | `hl auth login` | Interactive token setup |
 | `hl auth status` | Check authentication |
 | `hl auth logout` | Remove stored token |
@@ -57,6 +58,8 @@ Run the CLI after build: `node dist/index.mjs [options] [command]`
 | `src/types.ts` | Domain types (MarketBrief, Assessment, FeedResult) |
 | `src/commands/brief.ts` | Market Brief generation command |
 | `src/commands/research.ts` | Interactive research commands |
+| `src/commands/feed.ts` | `hl feed` → GET /api/feed |
+| `src/feed-display.ts` | Shared terminal rendering for feed results |
 | `src/commands/auth.ts` | Auth login/status/logout |
 | `src/commands/profile.ts` | Profile display |
 
@@ -72,6 +75,7 @@ All calls go to `https://hedgelayer.ai` (or `--api-url` override):
 - `GET /api/assessments/{id}` — Get session
 - `DELETE /api/assessments/{id}` — Delete session
 - `GET /api/profile` — User profile
+- `GET /api/feed` — Ranked market feed (same as chat `getFeed`; query params include `profile`, `sortBy`, `tag`, liquidity/volume filters)
 
 Auth: Bearer token via `Authorization: Bearer hl_*` header.
 

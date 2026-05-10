@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `hl feed` — calls `GET /api/feed` with the same query parameters as the web agent’s `getFeed` tool. Positional shorthand `hl feed lp-opportunity` and `hl feed liquid-new-or-long` map to the server’s curated screening profiles (thin-book LP yield vs. liquid new-or-long-dated markets).
+
+### Changed
+
+- Feed table output from interactive `hl research` now includes the attention **preset** name in the header; shared rendering lives in `src/feed-display.ts`.
+
 ## [1.3.0] - 2026-05-10
 
 ### Fixed

@@ -88,6 +88,8 @@ export interface FeedResultMarket {
     recency: number;
     extremity: number;
     rewards: number;
+    rewardYield?: number;
+    horizon?: number;
   };
 }
 
