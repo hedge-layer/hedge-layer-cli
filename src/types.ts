@@ -54,18 +54,6 @@ export interface Assessment {
   updated_at: string;
 }
 
-export interface ResearchResponse {
-  assessmentId: string;
-  brief: MarketBrief | null;
-  text: string | null;
-  metadata: {
-    model: string;
-    stepsUsed: number;
-    toolsUsed: string[];
-    durationMs: number;
-  };
-}
-
 export interface UserProfile {
   user_id: string;
   handle: string;

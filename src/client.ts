@@ -73,6 +73,49 @@ export class ApiClient {
     return res.json() as Promise<T>;
   }
 
+  /**
+   * POST /api/brief with stream: false — returns the Market Brief JSON body
+   * plus optional telemetry from response headers.
+   */
+  async postBriefSync(query: string): Promise<{
+    brief: Record<string, unknown>;
+    durationMs: number | null;
+    stepsCompleted: number | null;
+    toolsUsed: string[];
+  }> {
+    const path = "/api/brief";
+    this.log("POST", path);
+    const res = await fetch(`${this.baseUrl}${path}`, {
+      method: "POST",
+      headers: this.headers(),
+      body: JSON.stringify({ query, stream: false }),
+    });
+    this.log("POST", path, res.status);
+
+    const text = await res.text();
+    if (!res.ok) {
+      throw new ApiError(res.status, text);
+    }
+
+    let brief: Record<string, unknown>;
+    try {
+      brief = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      throw new ApiError(res.status, text || "Invalid JSON from /api/brief");
+    }
+
+    const dur = res.headers.get("X-Duration-Ms");
+    const steps = res.headers.get("X-Steps-Completed");
+    const tools = res.headers.get("X-Tools-Used");
+
+    return {
+      brief,
+      durationMs: dur != null ? Number(dur) : null,
+      stepsCompleted: steps != null ? Number(steps) : null,
+      toolsUsed: tools ? tools.split(",").filter(Boolean) : [],
+    };
+  }
+
   async patch<T>(path: string, body: unknown): Promise<T> {
     this.log("PATCH", path);
     const res = await fetch(`${this.baseUrl}${path}`, {

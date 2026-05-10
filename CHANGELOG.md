@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] - 2026-05-10
+
+### Fixed
+
+- `hl research run` called `POST /api/research`, which is not implemented on the Hedge Layer web app. It now uses `POST /api/brief` with `stream: false` and prints the Market Brief JSON on success.
+
+### Added
+
+- `ApiClient.postBriefSync()` for blocking brief generation (JSON body plus optional telemetry from response headers).
+- Interactive `hl research` saves progress after each assistant turn by calling `PATCH /api/assessments/:id` with `messages` and `metadata`. When the agent produces a brief, the patch also sets `market_brief` and `status: "completed"`, consistent with the web client’s behavior so sessions appear in `hl research list` / `hl research show`.
+- Tests for `postBriefSync`.
+- `CLAUDE.md` documenting commands and API endpoints for agent workflows.
+
+### Changed
+
+- README: document `hl research run`; remove stale `hl brief --no-stream` examples (the flag was removed in 1.2.0).
+- AGENTS.md: drop references to the removed `markets orderbook` command.
+
+### Removed
+
+- `ResearchResponse` TypeScript interface (no longer used).
+
+### Notes
+
+- Full brief titles and market counts in `hl research list` require the API list endpoint to include `market_brief` on each assessment row (server-side change shipped alongside this release).
+
 ## [1.2.0] - 2026-04-02
 
 ### Added
@@ -83,6 +109,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Global options: `--json`, `--api-url`, `--token`, `--verbose`, `--no-color`
 - Token storage in `~/.hedgelayer/config.json`
 
+[1.3.0]: https://github.com/hedgelayer/cli/releases/tag/v1.3.0
 [1.2.0]: https://github.com/hedgelayer/cli/releases/tag/v1.2.0
 [1.1.0]: https://github.com/hedgelayer/cli/releases/tag/v1.1.0
 [1.0.0]: https://github.com/hedgelayer/cli/releases/tag/v1.0.0

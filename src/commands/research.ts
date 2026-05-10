@@ -3,7 +3,7 @@ import readline from "node:readline/promises";
 import chalk from "chalk";
 import { ApiClient } from "../client.js";
 import { parseStream } from "../stream.js";
-import type { Assessment, MarketBrief, FeedResult, FeedResultMarket, GlobalOptions, ResearchResponse } from "../types.js";
+import type { Assessment, MarketBrief, FeedResult, FeedResultMarket, GlobalOptions } from "../types.js";
 import * as out from "../output.js";
 
 export function registerResearchCommands(program: Command): void {
@@ -33,6 +33,7 @@ export function registerResearchCommands(program: Command): void {
       });
 
       const messages: ReturnType<typeof uiMsg>[] = [];
+      let firstMessageTs: number | null = null;
       const rl = readline.createInterface({ input: process.stdin, output: process.stderr });
 
       try {
@@ -41,6 +42,7 @@ export function registerResearchCommands(program: Command): void {
           if (!userInput.trim()) continue;
           if (userInput.trim() === "/quit") break;
 
+          if (firstMessageTs === null) firstMessageTs = Date.now();
           messages.push(uiMsg("user", userInput));
 
           process.stderr.write(chalk.dim("\nAssistant: "));
@@ -69,6 +71,14 @@ export function registerResearchCommands(program: Command): void {
               messages.push(uiMsg("assistant", result.assistantText));
             }
 
+            try {
+              await persistAssessment(client, id, messages, result.marketBrief, firstMessageTs);
+            } catch (persistErr) {
+              out.warn(
+                `Could not save session: ${persistErr instanceof Error ? persistErr.message : String(persistErr)}`,
+              );
+            }
+
             if (result.feedResult) {
               displayFeedResult(result.feedResult as unknown as FeedResult, globalOpts);
             }
@@ -89,7 +99,7 @@ export function registerResearchCommands(program: Command): void {
 
   research
     .command("run <query>")
-    .description("Run research on a topic and return the final brief as JSON")
+    .description("Run research on a topic and return the final Market Brief as JSON (via /api/brief)")
     .action(async (query: string) => {
       const globalOpts = program.opts<GlobalOptions>();
       const client = new ApiClient(globalOpts);
@@ -98,16 +108,32 @@ export function registerResearchCommands(program: Command): void {
       process.stderr.write(chalk.dim(`  Researching "${out.truncate(query, 60)}"...\n`));
       const startTime = Date.now();
 
-      const result = await client.post<ResearchResponse>("/api/research", { query });
+      const { brief, durationMs, stepsCompleted, toolsUsed } = await client.postBriefSync(query);
 
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       process.stderr.write(chalk.dim(`  Done (${elapsed}s)\n\n`));
 
-      if (result.brief) {
-        out.json(result.brief);
+      const looksLikeBrief =
+        brief &&
+        typeof brief === "object" &&
+        Array.isArray((brief as { markets?: unknown }).markets) &&
+        typeof (brief as { title?: unknown }).title === "string";
+
+      if (looksLikeBrief) {
+        out.json(brief as unknown as MarketBrief);
       } else {
         process.stderr.write(chalk.yellow("No market brief was produced.\n"));
-        out.json(result);
+        out.json({
+          brief: null,
+          text: null,
+          metadata: {
+            model: "",
+            stepsUsed: stepsCompleted ?? 0,
+            toolsUsed,
+            durationMs: durationMs ?? Date.now() - startTime,
+          },
+          raw: brief,
+        });
       }
     });
 
@@ -193,6 +219,48 @@ function requireAuth(client: ApiClient): void {
     out.error("Not logged in. Run " + out.bold("hl auth login") + " first.");
     process.exit(1);
   }
+}
+
+/** Mirrors web ChatInterface assessment PATCH (simplified metadata without tool-part extraction). */
+function buildAssessmentPatch(
+  messages: unknown[],
+  marketBrief: Record<string, unknown> | null,
+  firstMessageTs: number | null,
+): Record<string, unknown> {
+  const patch: Record<string, unknown> = { messages };
+  const meta: Record<string, unknown> = {
+    timeToBriefMs: null,
+    searchQueries: [],
+    searchResultCounts: [],
+    coverageHit: false,
+    completedAt: null,
+  };
+
+  if (
+    marketBrief &&
+    typeof marketBrief === "object" &&
+    Array.isArray((marketBrief as { markets?: unknown }).markets)
+  ) {
+    const markets = (marketBrief as { markets: unknown[] }).markets;
+    patch.market_brief = marketBrief;
+    patch.status = "completed";
+    meta.timeToBriefMs = firstMessageTs != null ? Date.now() - firstMessageTs : null;
+    meta.coverageHit = markets.length > 0;
+    meta.completedAt = new Date().toISOString();
+  }
+
+  patch.metadata = meta;
+  return patch;
+}
+
+async function persistAssessment(
+  client: ApiClient,
+  assessmentId: string,
+  messages: unknown[],
+  marketBrief: Record<string, unknown> | null,
+  firstMessageTs: number | null,
+): Promise<void> {
+  await client.patch(`/api/assessments/${assessmentId}`, buildAssessmentPatch(messages, marketBrief, firstMessageTs));
 }
 
 function formatStatus(status: string): string {
