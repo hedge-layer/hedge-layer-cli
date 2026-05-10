@@ -120,6 +120,38 @@ describe("ApiClient", () => {
     });
   });
 
+  describe("postBriefSync", () => {
+    let fetchSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      fetchSpy = vi.spyOn(globalThis, "fetch");
+    });
+
+    afterEach(() => {
+      fetchSpy.mockRestore();
+    });
+
+    it("POSTs /api/brief with stream false and parses headers", async () => {
+      const brief = { title: "T", markets: [], thesis: "", watchlist: [], gaps: [], marketCount: 0, createdAt: "" };
+      const res = new Response(JSON.stringify(brief), { status: 200 });
+      res.headers.set("X-Duration-Ms", "1500");
+      res.headers.set("X-Steps-Completed", "3");
+      res.headers.set("X-Tools-Used", "a,b");
+      fetchSpy.mockResolvedValue(res);
+
+      const client = new ApiClient({ apiUrl: "https://api.test", token: "hl_t" });
+      const out = await client.postBriefSync("q");
+
+      expect(out.brief).toEqual(brief);
+      expect(out.durationMs).toBe(1500);
+      expect(out.stepsCompleted).toBe(3);
+      expect(out.toolsUsed).toEqual(["a", "b"]);
+
+      const opts = fetchSpy.mock.calls[0][1] as RequestInit;
+      expect(opts.body).toBe(JSON.stringify({ query: "q", stream: false }));
+    });
+  });
+
   describe("delete", () => {
     let fetchSpy: ReturnType<typeof vi.spyOn>;
 

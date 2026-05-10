@@ -59,9 +59,6 @@ hl --json brief "crypto regulation 2026" | jq '.markets'
 
 # Filter by tags and volume
 hl brief "energy policy" --tags "geopolitics,energy" --min-volume 10000
-
-# Disable streaming (block until complete)
-hl brief "AI regulation in Europe" --no-stream
 ```
 
 | Option | Description |
@@ -71,7 +68,6 @@ hl brief "AI regulation in Europe" --no-stream
 | `--tags <tags>` | Comma-separated focus area tags (e.g. `"geopolitics,energy"`) |
 | `--min-volume <n>` | Minimum market volume in USD |
 | `--max-yes-price <n>` | Maximum YES price (0-1) |
-| `--no-stream` | Disable streaming — block until complete |
 
 ### Research
 
@@ -80,6 +76,9 @@ AI-powered interactive research sessions. Describe a topic or thesis, and the AI
 ```bash
 # Start an interactive research session (Q&A)
 hl research
+
+# Non-interactive: same Market Brief as `hl brief`, JSON on stdout (blocking `POST /api/brief` with stream off)
+hl research run "US election forecasting"
 
 # List past research sessions
 hl research list
@@ -92,7 +91,7 @@ hl research show <id>
 hl research delete <id>
 ```
 
-For non-interactive, single-shot brief generation, use `hl brief` — it uses a dedicated API endpoint optimized for programmatic use.
+For a **non-interactive** JSON brief from the shell, use `hl research run` (blocking) or `hl brief` (streams progress on stderr). Both use the same `POST /api/brief` endpoint.
 
 ### Profile
 

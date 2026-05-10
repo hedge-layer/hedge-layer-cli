@@ -4,7 +4,7 @@
 
 This is a TypeScript CLI tool (`@hedge-layer/cli`) that acts as a thin client to the Hedge Layer API at `https://hedgelayer.ai`. There is no backend in this repo.
 
-Hedge Layer is a prediction market intelligence platform. The CLI provides terminal access to AI-powered market research sessions, Market Briefs, and Polymarket orderbook data.
+Hedge Layer is a prediction market intelligence platform. The CLI provides terminal access to AI-powered market research sessions and Market Briefs.
 
 ### Key commands
 
@@ -18,9 +18,7 @@ See `package.json` scripts and `README.md` for standard commands:
 
 ### Running the CLI
 
-After `npm run build`, run the CLI with `node dist/index.mjs`. Most commands (research, profile) require an API token. Use `--api-url` to point to a local dev server or `--token` to supply a token inline.
-
-The `markets orderbook <tokenId>` command works without auth and can be used to verify end-to-end HTTP connectivity.
+After `npm run build`, run the CLI with `node dist/index.mjs`. Most commands require an API token. Use `--api-url` to point to a local dev server or `--token` to supply a token inline.
 
 ### Environment
 
