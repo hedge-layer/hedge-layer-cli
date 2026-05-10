@@ -93,6 +93,24 @@ hl research delete <id>
 
 For a **non-interactive** JSON brief from the shell, use `hl research run` (blocking) or `hl brief` (streams progress on stderr). Both use the same `POST /api/brief` endpoint.
 
+### Feed
+
+Deterministic ranking of active Polymarket markets (same engine as the in-app **getFeed** tool and `GET /api/feed`). No LLM — fast quantitative screens.
+
+```bash
+# LP-style screen: thinner books with meaningful daily rewards (reward yield ranking)
+hl feed lp-opportunity
+hl --json feed lp-opportunity | jq '.markets[:5]'
+
+# Deep books that are either new (last 7d) or long-dated (90d+ to resolution), sorted by liquidity
+hl feed liquid-new-or-long
+
+# Custom: e.g. crypto tag only, sort by movement
+hl feed --tag crypto --sort-by movement --limit 25
+```
+
+Curated defaults live in the API (`profile=lp-opportunity` and `profile=liquid-new-or-long`); CLI flags override those defaults. Use `hl feed --help` for every filter.
+
 ### Profile
 
 ```bash
