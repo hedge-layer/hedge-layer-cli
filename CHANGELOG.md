@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-05-10
+
 ### Added
 
 - `hl feed` — calls `GET /api/feed` with the same query parameters as the web agent’s `getFeed` tool. Positional shorthand `hl feed lp-opportunity` and `hl feed liquid-new-or-long` map to the server’s curated screening profiles (thin-book LP yield vs. liquid new-or-long-dated markets).
@@ -119,7 +121,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Global options: `--json`, `--api-url`, `--token`, `--verbose`, `--no-color`
 - Token storage in `~/.hedgelayer/config.json`
 
-[1.3.0]: https://github.com/hedgelayer/cli/releases/tag/v1.3.0
+[1.4.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.4.0
+[1.3.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.3.0
 [1.2.0]: https://github.com/hedgelayer/cli/releases/tag/v1.2.0
 [1.1.0]: https://github.com/hedgelayer/cli/releases/tag/v1.1.0
 [1.0.0]: https://github.com/hedgelayer/cli/releases/tag/v1.0.0

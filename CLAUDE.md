@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Hedge Layer CLI (`@hedge-layer/cli`) — a TypeScript command-line client for the Hedge Layer prediction market intelligence platform at https://hedgelayer.ai. This is a thin HTTP client; there is no backend in this repo.
 
-Published on npm as `@hedge-layer/cli` (v1.3.0). Binary name: `hl`.
+Published on npm as `@hedge-layer/cli` (v1.4.0). Binary name: `hl`.
 
 ## Commands
 
