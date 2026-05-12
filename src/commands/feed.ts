@@ -33,6 +33,29 @@ function isProfile(s: string | undefined): s is (typeof PROFILE_CHOICES)[number]
   return s !== undefined && (PROFILE_CHOICES as readonly string[]).includes(s);
 }
 
+export function resolveFeedProfile(
+  screening: string | undefined,
+  profile: string | undefined,
+  warn: (message: string) => void = () => undefined,
+): string | undefined {
+  if (profile && !isProfile(profile)) {
+    throw new Error(`Unknown feed profile "${profile}". Use: ${PROFILE_CHOICES.join(" or ")}`);
+  }
+
+  if (!screening) return profile;
+
+  if (!isProfile(screening)) {
+    throw new Error(`Unknown screening "${screening}". Use: ${PROFILE_CHOICES.join(" or ")}`);
+  }
+
+  if (profile && profile !== screening) {
+    warn(`Both positional and --profile set; using --profile (${profile}).`);
+    return profile;
+  }
+
+  return profile ?? screening;
+}
+
 /**
  * Build query params for GET /api/feed. Omits undefined / empty string.
  */
@@ -101,17 +124,12 @@ export function registerFeedCommand(program: Command): void {
     .action(async (screening: string | undefined, o: FeedCmdOpts) => {
       const globalOpts = program.opts<GlobalOptions>();
 
-      let profile = o.profile;
-      if (screening) {
-        if (!isProfile(screening)) {
-          out.error(`Unknown screening "${screening}". Use: ${PROFILE_CHOICES.join(" or ")}`);
-          process.exit(1);
-        }
-        if (profile && profile !== screening) {
-          out.warn(`Both positional and --profile set; using --profile (${profile}).`);
-        } else if (!profile) {
-          profile = screening;
-        }
+      let profile: string | undefined;
+      try {
+        profile = resolveFeedProfile(screening, o.profile, out.warn);
+      } catch (e) {
+        out.error(e instanceof Error ? e.message : String(e));
+        process.exit(1);
       }
 
       const client = new ApiClient(globalOpts);
