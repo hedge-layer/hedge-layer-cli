@@ -27,7 +27,7 @@ function requireAuth(client: ApiClient): void {
   }
 }
 
-const PROFILE_CHOICES = ["lp-opportunity", "liquid-new-or-long"] as const;
+const PROFILE_CHOICES = ["lp-opportunity", "liquidity-provider", "liquid-new-or-long"] as const;
 
 function isProfile(s: string | undefined): s is (typeof PROFILE_CHOICES)[number] {
   return s !== undefined && (PROFILE_CHOICES as readonly string[]).includes(s);
@@ -86,7 +86,7 @@ export function registerFeedCommand(program: Command): void {
       "--profile <name>",
       `Screening defaults: ${PROFILE_CHOICES.join(", ")} — explicit flags override`,
     )
-    .option("--sort-by <key>", "score | volume | liquidity | movement | spread | recency | extremity | rewards | rewardYield | horizon")
+    .option("--sort-by <key>", "score | volume | liquidity | movement | spread | recency | extremity | rewards | rewardYield | lpExpectedReturn | horizon")
     .option("--preset <name>", "Attention weight preset (default, volume-hunter, lp-opportunity, …)")
     .option("--tag <slug>", "Polymarket category tag, e.g. crypto, politics")
     .option("--min-volume <usd>", "Minimum 24h volume (USD)")

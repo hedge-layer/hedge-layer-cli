@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- `hl allocator cycle` — fetches LP candidate markets from `GET /api/feed` and runs the account-authenticated dry-run allocator loop through `POST /api/allocator/cycle`, including optional repeat cycles from returned target allocations.
+- `liquidity-provider` feed profile support in the CLI to match the web app’s allocator-oriented screen.
+
 ## [1.4.0] - 2026-05-10
 
 ### Added

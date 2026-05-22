@@ -12,6 +12,7 @@ const SORT_LABELS: Record<string, string> = {
   extremity: "uncertainty",
   rewards: "rewards",
   rewardYield: "reward yield (per $ liq)",
+  lpExpectedReturn: "LP expected return",
   horizon: "time to resolution",
 };
 
