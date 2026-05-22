@@ -107,9 +107,32 @@ hl feed liquid-new-or-long
 
 # Custom: e.g. crypto tag only, sort by movement
 hl feed --tag crypto --sort-by movement --limit 25
+
+# Candidate screen tuned for allocator dry-run cycles
+hl feed liquidity-provider
 ```
 
-Curated defaults live in the API (`profile=lp-opportunity` and `profile=liquid-new-or-long`); CLI flags override those defaults. Use `hl feed --help` for every filter.
+Curated defaults live in the API (`profile=lp-opportunity`, `profile=liquidity-provider`, and `profile=liquid-new-or-long`); CLI flags override those defaults. Use `hl feed --help` for every filter.
+
+### Allocator
+
+Run the liquidity-provider loop from the terminal. The CLI first fetches feed candidates, then calls `POST /api/allocator/cycle` with your API token. The web API enforces user-scoped auth and dry-run mode; this command plans allocations and passive orders but does not place live trades.
+
+```bash
+# Run a dry-run LP allocation cycle from the default lp-opportunity feed
+hl allocator cycle
+
+# Use the allocator-focused feed profile and repeat once with returned targets
+hl allocator cycle liquidity-provider --repeat --max-markets 5
+
+# Pipe machine-readable decisions into jq
+hl --json allocator cycle --capital-limit 1000 --per-market-limit 150 | jq '.result.summary'
+
+# Continue a monitoring/rebalance cycle from existing allocation state
+hl allocator cycle --allocations ./allocations.json
+```
+
+Key options include `--capital-limit`, `--per-market-limit`, `--min-expected-return-daily-pct`, `--max-order-notional`, `--max-spread`, `--allocator-min-liquidity`, and the same feed filters used by `hl feed`.
 
 ### Profile
 
