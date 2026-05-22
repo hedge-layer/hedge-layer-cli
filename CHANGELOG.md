@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-05-22
+
 ### Added
 
 - `hl allocator cycle` — fetches LP candidate markets from `GET /api/feed` and runs the account-authenticated dry-run allocator loop through `POST /api/allocator/cycle`, including optional repeat cycles from returned target allocations.
@@ -126,6 +128,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Global options: `--json`, `--api-url`, `--token`, `--verbose`, `--no-color`
 - Token storage in `~/.hedgelayer/config.json`
 
+[1.5.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.5.0
 [1.4.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.4.0
 [1.3.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.3.0
 [1.2.0]: https://github.com/hedgelayer/cli/releases/tag/v1.2.0
