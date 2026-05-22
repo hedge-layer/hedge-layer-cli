@@ -16,7 +16,7 @@ Requires Node.js 22 or later.
 ## Quick Start
 
 ```bash
-# 1. Create an API token at https://hedgelayer.ai/settings → API Tokens
+# 1. Create an API token at https://hedgelayer.ai/account/settings → API Tokens
 # 2. Authenticate the CLI
 hl auth login
 
