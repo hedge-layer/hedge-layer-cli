@@ -19,7 +19,7 @@ export function registerAuthCommands(program: Command): void {
       try {
         out.heading("Hedge Layer CLI — Login");
         process.stderr.write(
-          `Create an API token at ${out.bold("https://hedgelayer.ai/settings")} → API Tokens\n\n`,
+          `Create an API token at ${out.bold("https://hedgelayer.ai/account/settings")} → API Tokens\n\n`,
         );
 
         const token = (await rl.question("Paste your API token: ")).trim();
