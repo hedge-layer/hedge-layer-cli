@@ -132,6 +132,12 @@ export interface AllocatorStrategyInput {
   id?: string;
   name?: string;
   status?: "dry_run" | "paused" | "live";
+  total_holdings?: number;
+  total_holdings_usd?: number;
+  portfolio_value?: number;
+  portfolio_value_usd?: number;
+  capital_limit_pct?: number;
+  per_market_limit_pct?: number;
   capital_limit?: number;
   per_market_limit?: number;
   min_expected_return_daily_pct?: number;

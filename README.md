@@ -128,11 +128,14 @@ hl allocator cycle liquidity-provider --repeat --max-markets 5
 # Pipe machine-readable decisions into jq
 hl --json allocator cycle --capital-limit 1000 --per-market-limit 150 | jq '.result.summary'
 
+# Size allocation caps as percentages of total holdings
+hl allocator cycle liquidity-provider --total-holdings 10000 --capital-limit-pct 2 --per-market-limit-pct 0.5
+
 # Continue a monitoring/rebalance cycle from existing allocation state
 hl allocator cycle --allocations ./allocations.json
 ```
 
-Key options include `--capital-limit`, `--per-market-limit`, `--min-expected-return-daily-pct`, `--max-order-notional`, `--max-spread`, `--allocator-min-liquidity`, and the same feed filters used by `hl feed`.
+Key options include `--total-holdings`, `--capital-limit-pct`, `--per-market-limit-pct`, `--capital-limit`, `--per-market-limit`, `--min-expected-return-daily-pct`, `--max-order-notional`, `--max-spread`, `--allocator-min-liquidity`, and the same feed filters used by `hl feed`.
 
 ### Profile
 

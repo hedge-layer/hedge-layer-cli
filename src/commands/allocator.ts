@@ -32,6 +32,9 @@ interface AllocatorCycleOpts {
   maxMarketAgeHours?: string;
   liquidProfile?: string;
   limit: string;
+  totalHoldings?: number;
+  capitalLimitPct?: number;
+  perMarketLimitPct?: number;
   capitalLimit: number;
   perMarketLimit: number;
   minExpectedReturnDailyPct: number;
@@ -100,6 +103,9 @@ function strategyFromOptions(opts: AllocatorCycleOpts): AllocatorStrategyInput {
     id: "cli-dry-run",
     name: "CLI dry-run LP strategy",
     status: opts.paused ? "paused" : "dry_run",
+    ...(opts.totalHoldings !== undefined && { total_holdings: opts.totalHoldings }),
+    ...(opts.capitalLimitPct !== undefined && { capital_limit_pct: opts.capitalLimitPct }),
+    ...(opts.perMarketLimitPct !== undefined && { per_market_limit_pct: opts.perMarketLimitPct }),
     capital_limit: opts.capitalLimit,
     per_market_limit: opts.perMarketLimit,
     min_expected_return_daily_pct: opts.minExpectedReturnDailyPct,
@@ -111,6 +117,17 @@ function strategyFromOptions(opts: AllocatorCycleOpts): AllocatorStrategyInput {
     min_days_to_end: opts.allocatorMinDaysToEnd,
     max_markets: opts.maxMarkets,
   };
+}
+
+function validatePercentageSizing(opts: AllocatorCycleOpts): void {
+  const usesPercentageSizing =
+    opts.capitalLimitPct !== undefined || opts.perMarketLimitPct !== undefined;
+  if (usesPercentageSizing && opts.totalHoldings === undefined) {
+    out.error(
+      "Percentage sizing requires --total-holdings so the allocator can convert percentages into dollar caps.",
+    );
+    process.exit(1);
+  }
 }
 
 async function readAllocations(path: string | undefined): Promise<AllocatorAllocationInput[]> {
@@ -163,6 +180,9 @@ export function registerAllocatorCommands(program: Command): void {
     .option("--max-market-age-hours <n>", "With liquid-new-or-long: max age for the new branch")
     .option("--liquid-profile <mode>", "new-or-long (used by liquid-new-or-long screen)")
     .option("--limit <n>", "Max feed markets to fetch (1-100, default 15)", "15")
+    .option("--total-holdings <usd>", "Total user holdings / portfolio value used for percentage sizing", parseNonNegative)
+    .option("--capital-limit-pct <pct>", "Portfolio-level allocation cap as a percent of total holdings", parseNonNegative)
+    .option("--per-market-limit-pct <pct>", "Per-market target cap as a percent of total holdings", parseNonNegative)
     .option("--capital-limit <usd>", "Portfolio capital limit for this cycle", parseNonNegative, 500)
     .option("--per-market-limit <usd>", "Per-market target cap", parseNonNegative, 100)
     .option("--min-expected-return-daily-pct <pct>", "Minimum expected daily return percent", parseNonNegative, 0.02)
@@ -180,6 +200,7 @@ export function registerAllocatorCommands(program: Command): void {
       const globalOpts = program.opts<GlobalOptions>();
       const client = new ApiClient(globalOpts);
       requireAuth(client);
+      validatePercentageSizing(o);
 
       let profile = o.profile ?? screening ?? "lp-opportunity";
       if (!isProfile(profile)) {
