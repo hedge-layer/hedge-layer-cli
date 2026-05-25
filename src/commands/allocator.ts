@@ -69,6 +69,14 @@ function parseNonNegative(value: string): number {
   return n;
 }
 
+export function parsePositiveNumber(value: string): number {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new InvalidArgumentError("Expected a positive number");
+  }
+  return n;
+}
+
 function parsePositiveInt(value: string): number {
   const n = Number(value);
   if (!Number.isInteger(n) || n < 1) {
@@ -180,9 +188,9 @@ export function registerAllocatorCommands(program: Command): void {
     .option("--max-market-age-hours <n>", "With liquid-new-or-long: max age for the new branch")
     .option("--liquid-profile <mode>", "new-or-long (used by liquid-new-or-long screen)")
     .option("--limit <n>", "Max feed markets to fetch (1-100, default 15)", "15")
-    .option("--total-holdings <usd>", "Total user holdings / portfolio value used for percentage sizing", parseNonNegative)
-    .option("--capital-limit-pct <pct>", "Portfolio-level allocation cap as a percent of total holdings", parseNonNegative)
-    .option("--per-market-limit-pct <pct>", "Per-market target cap as a percent of total holdings", parseNonNegative)
+    .option("--total-holdings <usd>", "Total user holdings / portfolio value used for percentage sizing", parsePositiveNumber)
+    .option("--capital-limit-pct <pct>", "Portfolio-level allocation cap as a percent of total holdings", parsePositiveNumber)
+    .option("--per-market-limit-pct <pct>", "Per-market target cap as a percent of total holdings", parsePositiveNumber)
     .option("--capital-limit <usd>", "Portfolio capital limit for this cycle", parseNonNegative, 500)
     .option("--per-market-limit <usd>", "Per-market target cap", parseNonNegative, 100)
     .option("--min-expected-return-daily-pct <pct>", "Minimum expected daily return percent", parseNonNegative, 0.02)
