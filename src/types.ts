@@ -105,6 +105,50 @@ export interface WalletBalances {
   assets: Record<WalletAssetKey, WalletBalanceAsset>;
 }
 
+export interface WalletDepositResponse {
+  action: "deposit";
+  mode: "direct" | "bridge";
+  direct: {
+    publicDepositAddress: string;
+    walletAddress: string;
+    chainId: number;
+    network: string;
+    assets: Record<WalletAssetKey, WalletBalanceAsset>;
+    warning: string;
+  };
+  bridge?: {
+    address?: Record<string, string>;
+    note?: string;
+    warnings?: { code?: string; message?: string }[];
+    [key: string]: unknown;
+  };
+}
+
+export interface WalletWithdrawIntent {
+  id: string;
+  status: "pending" | "submitted" | "succeeded" | "failed" | "cancelled" | "expired";
+  walletAddress: string;
+  amount: string;
+  amountBaseUnit: string;
+  fromChainId: string;
+  fromTokenAddress: string;
+  toChainId: string;
+  toTokenAddress: string;
+  recipientAddress: string;
+  bridgeAddresses: Record<string, string>;
+  quote?: Record<string, unknown>;
+  txHash?: string | null;
+  error?: string | null;
+  expiresAt: string;
+  createdAt?: string;
+  updatedAt?: string;
+  signingUrl: string;
+}
+
+export interface WalletWithdrawIntentResponse {
+  intent: WalletWithdrawIntent;
+}
+
 // ---------------------------------------------------------------------------
 // Feed result — matches getFeed tool output from the web agent
 // ---------------------------------------------------------------------------

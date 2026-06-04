@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDepositInstructions,
-  buildWithdrawIntent,
+  buildWithdrawRequestPayload,
   normalizeWalletAsset,
 } from "./wallet.js";
 import type { WalletBalances } from "../types.js";
@@ -68,6 +68,7 @@ describe("wallet command helpers", () => {
 
     expect(instructions).toMatchObject({
       action: "deposit",
+      publicDepositAddress: balances.walletAddress,
       walletAddress: balances.walletAddress,
       chainId: 137,
       network: "Polygon",
@@ -77,20 +78,28 @@ describe("wallet command helpers", () => {
     expect(instructions.assets[0].address).toBe(balances.assets.usdcE.address);
   });
 
-  it("builds a non-executable withdrawal intent", () => {
-    const intent = buildWithdrawIntent(balances, {
+  it("builds a browser-signed withdrawal request payload", () => {
+    const payload = buildWithdrawRequestPayload({
       asset: "pUSD",
       amount: 10,
       to: "0x0000000000000000000000000000000000000002",
     });
 
-    expect(intent).toMatchObject({
-      action: "withdraw",
-      supported: false,
-      asset: { symbol: "pUSD" },
+    expect(payload).toEqual({
       amount: 10,
-      availableBalance: "125",
+      recipientAddress: "0x0000000000000000000000000000000000000002",
+      toChainId: "137",
+      toTokenAddress: "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
     });
-    expect(intent.reason).toContain("cannot sign wallet transactions");
+  });
+
+  it("rejects non-pUSD withdrawal sources", () => {
+    expect(() =>
+      buildWithdrawRequestPayload({
+        asset: "USDC.e",
+        amount: 10,
+        to: "0x0000000000000000000000000000000000000002",
+      }),
+    ).toThrow("currently send pUSD");
   });
 });
