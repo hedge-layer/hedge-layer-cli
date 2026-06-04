@@ -28,12 +28,26 @@ hl brief "US China trade war tariffs"
 
 # 4. Or start an interactive research session
 hl research
+
+# 5. Run the persisted liquidity-provider loop
+hl lp scan "liquidity opportunities"
+hl lp recommend --scan-id <scan-id>
+hl lp evaluate
 ```
 
 ## Commands
 
 Full command documentation is available at
 [hedgelayer.ai/docs/cli](https://hedgelayer.ai/docs/cli).
+
+Liquidity-provider workflows are available under `hl lp`:
+
+```bash
+hl lp scan "liquidity opportunities"   # persist candidate evidence
+hl lp recommend --scan-id <scan-id>    # recommend allocate/reduce/exit actions
+hl lp evaluate                         # summarize PnL lessons
+hl lp run                              # run the dry-run chain
+```
 
 ## Changelog
 
