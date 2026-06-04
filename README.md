@@ -67,6 +67,10 @@ hl wallet withdraw --asset pUSD --amount 10 --to 0x...
 and polls until the Magic wallet-signed transfer succeeds, fails, or times out.
 The CLI token never receives wallet signing power.
 
+Withdrawals currently send `pUSD` from the linked Magic wallet on Polygon. Keep
+a small `POL` balance in that wallet for Polygon gas; without native `POL`, the
+browser-signed transfer can fail even when the `pUSD` balance is sufficient.
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for release history.
