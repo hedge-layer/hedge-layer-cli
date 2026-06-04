@@ -39,8 +39,8 @@ const balances: WalletBalances = {
       ok: true,
     },
     matic: {
-      symbol: "MATIC",
-      name: "Polygon gas token",
+      symbol: "POL",
+      name: "Polygon native gas token",
       address: null,
       decimals: 18,
       balanceRaw: "1000000000000000000",
@@ -55,6 +55,7 @@ describe("wallet command helpers", () => {
     expect(normalizeWalletAsset("pUSD")).toBe("pUsd");
     expect(normalizeWalletAsset("USDC.e")).toBe("usdcE");
     expect(normalizeWalletAsset("bridged-usdc")).toBe("usdcE");
+    expect(normalizeWalletAsset("POL")).toBe("matic");
     expect(normalizeWalletAsset("MATIC")).toBe("matic");
     expect(normalizeWalletAsset(undefined)).toBeUndefined();
   });

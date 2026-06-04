@@ -56,7 +56,7 @@ Wallet commands are available under `hl wallet`:
 
 ```bash
 hl wallet status                       # show linked Magic wallet status
-hl wallet balances                     # show available pUSD, USDC.e, and MATIC
+hl wallet balances                     # show available pUSD, USDC.e, and POL
 hl wallet funds                        # alias for balances
 hl wallet deposit                      # show public Polygon deposit address and assets
 hl wallet deposit --bridge             # also show Polymarket Bridge deposit addresses
