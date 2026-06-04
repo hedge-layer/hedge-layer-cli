@@ -16,6 +16,7 @@ import * as out from "../output.js";
 const NETWORK_NAME = "Polygon";
 const POLYGON_NATIVE_USDC = "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359";
 const SUPPORTED_ASSETS: WalletAssetKey[] = ["pUsd", "usdcE", "matic"];
+const POLYGON_NATIVE_ASSET_LABEL = "POL";
 const TERMINAL_WITHDRAWAL_STATUSES = new Set(["succeeded", "failed", "cancelled", "expired"]);
 
 interface DepositInstructions {
@@ -75,7 +76,7 @@ export function normalizeWalletAsset(value: string | undefined): WalletAssetKey 
   if (["pusd", "polymarketusd"].includes(normalized)) return "pUsd";
   if (["usdce", "usdcebridged", "bridgedusdc", "usdc"].includes(normalized)) return "usdcE";
   if (["matic", "pol"].includes(normalized)) return "matic";
-  throw new InvalidArgumentError("Unknown wallet asset. Use pUSD, USDC.e, or MATIC.");
+  throw new InvalidArgumentError("Unknown wallet asset. Use pUSD, USDC.e, or POL.");
 }
 
 function assetByKey(balances: WalletBalances, key: WalletAssetKey): WalletBalanceAsset {
@@ -91,10 +92,14 @@ function displayAmount(asset: WalletBalanceAsset): string {
     return `unavailable${asset.error ? ` (${asset.error})` : ""}`;
   }
   const numeric = Number(asset.balance);
-  if (asset.symbol === "MATIC") {
+  if (asset.address === null && asset.decimals === 18) {
     return Number.isFinite(numeric) ? numeric.toLocaleString("en-US", { maximumFractionDigits: 6 }) : asset.balance;
   }
   return Number.isFinite(numeric) ? out.currency(numeric) : asset.balance;
+}
+
+function displayAssetSymbol(asset: WalletBalanceAsset): string {
+  return asset.address === null && asset.decimals === 18 ? POLYGON_NATIVE_ASSET_LABEL : asset.symbol;
 }
 
 export function buildDepositInstructions(
@@ -149,7 +154,7 @@ function displayWalletBalances(balances: WalletBalances): void {
     ["Chain", `${NETWORK_NAME} (${balances.chainId})`],
     ["Available pUSD", displayAmount(balances.available)],
     ["USDC.e", displayAmount(balances.assets.usdcE)],
-    ["MATIC", displayAmount(balances.assets.matic)],
+    [displayAssetSymbol(balances.assets.matic), displayAmount(balances.assets.matic)],
     ["Updated", new Date(balances.updatedAt).toLocaleString()],
   ]);
 }
@@ -164,7 +169,7 @@ function displayDepositInstructions(instructions: DepositInstructions): void {
   process.stdout.write("\n");
   out.table(
     instructions.assets.map((asset) => [
-      asset.symbol,
+      displayAssetSymbol(asset),
       tokenAddress(asset),
       displayAmount(asset),
     ]),
@@ -295,7 +300,7 @@ export function registerWalletCommands(program: Command): void {
   wallet
     .command("deposit")
     .description("Show deposit address and supported Polygon assets")
-    .option("--asset <asset>", "pUSD | USDC.e | MATIC")
+    .option("--asset <asset>", "pUSD | USDC.e | POL")
     .option("--bridge", "Also request Polymarket Bridge deposit addresses")
     .action(async (opts: DepositOpts) => {
       const globalOpts = program.opts<GlobalOptions>();
