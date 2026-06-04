@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-06-04
+
+### Changed
+
+- Point the package README to the canonical CLI guide in the Hedge Layer web app docs.
+- Bump the CLI package version to `1.6.0`.
+
+### Fixed
+
+- Update `vitest` to `^4.1.8` to resolve the critical dev-dependency audit advisory for the Vitest UI server.
+
 ## [1.5.0] - 2026-05-22
 
 ### Added
@@ -128,6 +139,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Global options: `--json`, `--api-url`, `--token`, `--verbose`, `--no-color`
 - Token storage in `~/.hedgelayer/config.json`
 
+[1.6.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.6.0
 [1.5.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.5.0
 [1.4.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.4.0
 [1.3.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.3.0
