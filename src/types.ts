@@ -246,6 +246,81 @@ export interface AllocatorCycleApiResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Persisted LP workflow API responses
+// ---------------------------------------------------------------------------
+
+export interface LpScanResponse extends FeedResult {
+  scanId: string;
+  strategyId: string;
+  topic: string;
+  profile: string;
+  evidenceSaved: number;
+  filters?: Record<string, unknown>;
+}
+
+export interface LpRecommendResponse {
+  mode?: string;
+  cycleId: string;
+  scanId?: string | null;
+  strategyId: string;
+  candidatesSubmitted: number;
+  allocationsSubmitted: number;
+  pnlContextCount: number;
+  pnlSynced: boolean;
+  approvalRequired: boolean;
+  decisions: AllocatorDecision[];
+  result: AllocatorCycleResult;
+  error?: string;
+}
+
+export interface LpEvaluationSummary {
+  snapshots: number;
+  markets: number;
+  realizedPnl: number;
+  unrealizedPnl: number;
+  cashPnl: number;
+  netPnl: number;
+  currentValue: number;
+  capitalLocked: number;
+  outcomes: Record<string, number>;
+}
+
+export interface LpPnlLesson {
+  market_slug?: string | null;
+  realized_pnl?: number;
+  unrealized_pnl?: number;
+  cash_pnl?: number;
+  net_pnl?: number;
+  capital_locked?: number;
+  outcome?: string;
+  lesson?: string;
+  [key: string]: unknown;
+}
+
+export interface LpEvaluateResponse {
+  strategyId: string;
+  walletAddress: string | null;
+  pnlSynced: boolean;
+  syncError: string | null;
+  summary: LpEvaluationSummary;
+  lessons: LpPnlLesson[];
+  error?: string;
+}
+
+export interface LpRunResponse {
+  mode?: string;
+  cycleId: string;
+  scanId?: string;
+  strategyId: string;
+  opportunitiesFound: number;
+  pnlSynced: boolean;
+  approvalRequired: boolean;
+  decisions: AllocatorDecision[];
+  result: AllocatorCycleResult;
+  error?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Brief API request/response
 // ---------------------------------------------------------------------------
 
