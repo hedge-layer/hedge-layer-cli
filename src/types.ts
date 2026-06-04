@@ -62,6 +62,50 @@ export interface UserProfile {
 }
 
 // ---------------------------------------------------------------------------
+// Wallet status and funds
+// ---------------------------------------------------------------------------
+
+export interface WalletRecord {
+  id?: string;
+  provider: string;
+  email?: string | null;
+  wallet_address: string;
+  chain_id: number;
+  metadata?: Record<string, unknown> | null;
+  linked_at?: string;
+  updated_at?: string;
+}
+
+export interface WalletStatus {
+  linked: boolean;
+  provider: string;
+  wallet: WalletRecord | null;
+  magicPublishableKey?: string | null;
+  magicPublishableKeyConfigured?: boolean;
+}
+
+export type WalletAssetKey = "pUsd" | "usdcE" | "matic";
+
+export interface WalletBalanceAsset {
+  symbol: string;
+  name: string;
+  address: string | null;
+  decimals: number;
+  balanceRaw: string;
+  balance: string;
+  ok: boolean;
+  error?: string;
+}
+
+export interface WalletBalances {
+  walletAddress: string;
+  chainId: number;
+  updatedAt: string;
+  available: WalletBalanceAsset;
+  assets: Record<WalletAssetKey, WalletBalanceAsset>;
+}
+
+// ---------------------------------------------------------------------------
 // Feed result — matches getFeed tool output from the web agent
 // ---------------------------------------------------------------------------
 

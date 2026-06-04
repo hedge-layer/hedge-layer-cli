@@ -33,6 +33,9 @@ hl research
 hl lp scan "liquidity opportunities"
 hl lp recommend --scan-id <scan-id>
 hl lp evaluate
+
+# 6. Check linked wallet funds
+hl wallet balances
 ```
 
 ## Commands
@@ -48,6 +51,21 @@ hl lp recommend --scan-id <scan-id>    # recommend allocate/reduce/exit actions
 hl lp evaluate                         # summarize PnL lessons
 hl lp run                              # run the dry-run chain
 ```
+
+Wallet commands are available under `hl wallet`:
+
+```bash
+hl wallet status                       # show linked Magic wallet status
+hl wallet balances                     # show available pUSD, USDC.e, and MATIC
+hl wallet funds                        # alias for balances
+hl wallet deposit                      # show Polygon deposit address and assets
+hl wallet deposit --asset USDC.e       # show deposit details for one asset
+hl wallet withdraw --asset pUSD --amount 10 --to 0x...
+```
+
+`hl wallet withdraw` validates the requested withdrawal intent but does not move
+funds yet. Hedge Layer does not custody wallet keys; a wallet-signed browser flow
+is required before CLI withdrawals can execute.
 
 ## Changelog
 
