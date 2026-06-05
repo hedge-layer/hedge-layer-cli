@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-06-05
+
+### Added
+
+- Wallet funding commands under `hl wallet` for status, balances/funds, deposit instructions, and browser-signed withdrawal intents.
+- Polygon asset display for pUSD, USDC.e, and native POL wallet balances.
+
+### Changed
+
+- `hl wallet status` now reports MetaMask owner wallet, Polymarket deposit wallet, deposit readiness, approval, deployment, and relayer configuration.
+- Replace user-facing Magic wallet wording with owner/deposit wallet terminology in CLI help and README docs.
+- Document POL gas requirements for browser-signed wallet withdrawals.
+
 ## [1.6.0] - 2026-06-04
 
 ### Changed
@@ -139,6 +152,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Global options: `--json`, `--api-url`, `--token`, `--verbose`, `--no-color`
 - Token storage in `~/.hedgelayer/config.json`
 
+[1.7.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.7.0
 [1.6.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.6.0
 [1.5.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.5.0
 [1.4.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.4.0

@@ -55,7 +55,7 @@ hl lp run                              # run the dry-run chain
 Wallet commands are available under `hl wallet`:
 
 ```bash
-hl wallet status                       # show linked Magic wallet status
+hl wallet status                       # show linked owner and Polymarket deposit wallet status
 hl wallet balances                     # show available pUSD, USDC.e, and POL
 hl wallet funds                        # alias for balances
 hl wallet deposit                      # show public Polygon deposit address and assets
@@ -64,12 +64,13 @@ hl wallet withdraw --asset pUSD --amount 10 --to 0x...
 ```
 
 `hl wallet withdraw` creates a withdrawal intent, opens the browser signing page,
-and polls until the Magic wallet-signed transfer succeeds, fails, or times out.
+and polls until the deposit-wallet transfer succeeds, fails, or times out.
 The CLI token never receives wallet signing power.
 
-Withdrawals currently send `pUSD` from the linked Magic wallet on Polygon. Keep
-a small `POL` balance in that wallet for Polygon gas; without native `POL`, the
-browser-signed transfer can fail even when the `pUSD` balance is sufficient.
+Withdrawals currently send `pUSD` from the linked Polymarket deposit wallet on Polygon.
+Keep a small `POL` balance in the owner wallet for Polygon gas; without native
+`POL`, the browser-signed transfer can fail even when the deposit wallet has
+enough `pUSD`.
 
 ## Changelog
 
