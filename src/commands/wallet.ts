@@ -136,14 +136,21 @@ export function buildWithdrawRequestPayload(opts: WithdrawOpts) {
 }
 
 function displayWalletStatus(status: WalletStatus): void {
+  const ownerWallet = status.ownerWallet ?? status.wallet;
+  const depositWallet = status.depositWallet ?? status.tradingWallet ?? null;
+
   out.heading("Wallet");
   out.table([
-    ["Linked", status.linked ? "yes" : "no"],
+    ["Owner linked", status.linked ? "yes" : "no"],
     ["Provider", status.provider],
-    ["Wallet", status.wallet?.wallet_address ?? "(none)"],
-    ["Chain", status.wallet ? `${NETWORK_NAME} (${status.wallet.chain_id})` : "(none)"],
-    ["Linked at", status.wallet?.linked_at ? new Date(status.wallet.linked_at).toLocaleString() : "(none)"],
-    ["Magic configured", status.magicPublishableKeyConfigured ? "yes" : "no"],
+    ["Owner wallet", ownerWallet?.wallet_address ?? "(none)"],
+    ["Owner chain", ownerWallet ? `${NETWORK_NAME} (${ownerWallet.chain_id})` : "(none)"],
+    ["Owner linked at", ownerWallet?.linked_at ? new Date(ownerWallet.linked_at).toLocaleString() : "(none)"],
+    ["Deposit wallet", depositWallet?.wallet_address ?? "(none)"],
+    ["Deposit deployed", status.depositWalletDeployed ? "yes" : "no"],
+    ["Deposit approved", status.depositWalletApproved ? "yes" : "no"],
+    ["Deposit ready", status.depositWalletReady ? "yes" : "no"],
+    ["Relayer configured", status.relayerConfigured ? "yes" : "no"],
   ]);
 }
 
@@ -266,7 +273,7 @@ export function registerWalletCommands(program: Command): void {
 
   wallet
     .command("status")
-    .description("Show linked Magic wallet status")
+    .description("Show linked owner and Polymarket deposit wallet status")
     .action(async () => {
       const globalOpts = program.opts<GlobalOptions>();
       const client = new ApiClient(globalOpts);

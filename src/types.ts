@@ -80,6 +80,15 @@ export interface WalletStatus {
   linked: boolean;
   provider: string;
   wallet: WalletRecord | null;
+  ownerWallet?: WalletRecord | null;
+  depositWallet?: WalletRecord | null;
+  tradingWallet?: WalletRecord | null;
+  depositWalletReady?: boolean;
+  depositWalletDeployed?: boolean;
+  depositWalletApproved?: boolean;
+  relayerUrl?: string | null;
+  relayerConfigured?: boolean;
+  /** Legacy response fields kept optional for older servers. */
   magicPublishableKey?: string | null;
   magicPublishableKeyConfigured?: boolean;
 }
