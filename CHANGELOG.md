@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+
+- `hl research show` and `hl research delete` now accept the short 8-character session ID printed by `hl research list` (in addition to the full UUID), resolving it automatically. Unknown or ambiguous IDs produce a clear, actionable error instead of `API error 400: Invalid assessment ID`.
+
+### Documentation
+
+- Document global-install troubleshooting in the README: the `EACCES` permission fix via a user-writable npm prefix, and how to avoid (or safely ignore) the cosmetic `nvm` `npmrc prefix` warning.
+
 ## [1.7.0] - 2026-06-05
 
 ### Added
