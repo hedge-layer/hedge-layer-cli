@@ -176,13 +176,14 @@ export function registerResearchCommands(program: Command): void {
 
   research
     .command("show <id>")
-    .description("Show research session details")
+    .description("Show research session details (accepts the short ID shown by `hl research list`)")
     .action(async (id: string) => {
       const globalOpts = program.opts<GlobalOptions>();
       const client = new ApiClient(globalOpts);
       requireAuth(client);
 
-      const assessment = await client.get<Assessment>(`/api/assessments/${id}`);
+      const fullId = await resolveOrExit(client, id);
+      const assessment = await client.get<Assessment>(`/api/assessments/${fullId}`);
 
       if (globalOpts.json) {
         out.json(assessment);
@@ -204,15 +205,80 @@ export function registerResearchCommands(program: Command): void {
 
   research
     .command("delete <id>")
-    .description("Delete a research session")
+    .description("Delete a research session (accepts the short ID shown by `hl research list`)")
     .action(async (id: string) => {
       const globalOpts = program.opts<GlobalOptions>();
       const client = new ApiClient(globalOpts);
       requireAuth(client);
 
-      await client.delete(`/api/assessments/${id}`);
+      const fullId = await resolveOrExit(client, id);
+      await client.delete(`/api/assessments/${fullId}`);
       out.success("Research session deleted.");
     });
+}
+
+/** Matches a full assessment UUID (e.g. 7f4fdace-a4b2-428d-87f1-fbf715165776). */
+const FULL_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolve a user-supplied session identifier (a full UUID or the short 8-char
+ * prefix printed by `hl research list`) against a set of known assessment IDs.
+ *
+ * Pure and synchronous so it can be unit-tested without network access.
+ */
+export function matchAssessmentId(idOrPrefix: string, ids: string[]): string {
+  const needle = idOrPrefix.trim().toLowerCase();
+  if (!needle) {
+    throw new Error("No research session ID provided.");
+  }
+
+  // Exact match wins outright (covers full UUIDs present in the list).
+  const exact = ids.find((id) => id.toLowerCase() === needle);
+  if (exact) return exact;
+
+  const matches = ids.filter((id) => id.toLowerCase().startsWith(needle));
+  if (matches.length === 1) return matches[0];
+
+  if (matches.length === 0) {
+    throw new Error(
+      `No research session found matching "${idOrPrefix}". Run \`hl research list\` to see available sessions.`,
+    );
+  }
+
+  const shortIds = matches.map((id) => id.slice(0, 8)).join(", ");
+  throw new Error(
+    `"${idOrPrefix}" matches ${matches.length} research sessions (${shortIds}). Use a longer ID prefix to disambiguate.`,
+  );
+}
+
+/**
+ * Turn a full UUID or short ID prefix into the full assessment UUID.
+ * Full UUIDs are returned directly (no extra API call); short prefixes are
+ * resolved by listing the user's sessions and matching.
+ */
+export async function resolveAssessmentId(client: ApiClient, idOrPrefix: string): Promise<string> {
+  const trimmed = idOrPrefix.trim();
+  if (FULL_UUID.test(trimmed)) return trimmed;
+
+  const data = await client.get<{ assessments: Assessment[] }>("/api/assessments", { list: "true" });
+  return matchAssessmentId(
+    trimmed,
+    data.assessments.map((a) => a.id),
+  );
+}
+
+/**
+ * Resolve a session ID for a CLI action, printing a clean error and exiting on
+ * an ambiguous/unknown identifier instead of surfacing it as an unexpected error.
+ */
+async function resolveOrExit(client: ApiClient, idOrPrefix: string): Promise<string> {
+  try {
+    return await resolveAssessmentId(client, idOrPrefix);
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("API error")) throw e;
+    out.error(e instanceof Error ? e.message : String(e));
+    process.exit(1);
+  }
 }
 
 function requireAuth(client: ApiClient): void {

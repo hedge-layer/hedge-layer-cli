@@ -16,6 +16,33 @@ npm install -g @hedge-layer/cli
 
 Requires Node.js 22 or later.
 
+### Install troubleshooting
+
+- **`EACCES` / "operation was rejected by your operating system"** on `npm install -g`:
+  your npm prefix points at a root-owned directory (e.g. `/usr/lib/node_modules`) and you
+  don't have `sudo`. Install into a user-writable prefix instead:
+
+  ```bash
+  mkdir -p "$HOME/.npm-global"
+  npm config set prefix "$HOME/.npm-global"
+  export PATH="$HOME/.npm-global/bin:$PATH"   # add to your shell rc to persist
+  npm install -g @hedge-layer/cli
+  ```
+
+- **`nvm` warns `npmrc ... globalconfig and/or prefix setting ... incompatible with nvm`:**
+  this is harmless shell-init noise from `nvm` (not from `hl`) that appears after setting a
+  custom npm prefix as above — the CLI still works. To avoid it entirely under `nvm`, install
+  without a custom prefix (nvm's per-version `bin/` is already user-writable):
+
+  ```bash
+  npm config delete prefix
+  npm config delete globalconfig
+  nvm use --delete-prefix "$(node -v)" --silent
+  npm install -g @hedge-layer/cli
+  ```
+
+  Alternatively, skip the global install and run on demand with `npx @hedge-layer/cli <command>`.
+
 ## Quick Start
 
 ```bash
