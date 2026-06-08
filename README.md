@@ -63,6 +63,9 @@ hl lp evaluate
 
 # 6. Check linked wallet funds
 hl wallet balances
+
+# 7. Analyze a market probability edge
+hl signal analyze "https://polymarket.com/event/example-market"
 ```
 
 ## Commands
@@ -98,6 +101,14 @@ Withdrawals currently send `pUSD` from the linked Polymarket deposit wallet on P
 Keep a small `POL` balance in the owner wallet for Polygon gas; without native
 `POL`, the browser-signed transfer can fail even when the deposit wallet has
 enough `pUSD`.
+
+Signal-agent analysis is available under `hl signal`:
+
+```bash
+hl signal analyze "https://polymarket.com/event/example-market"
+hl signal analyze "https://polymarket.com/event/example-market" --context "Recent search notes"
+hl --json signal analyze "https://polymarket.com/event/example-market" | jq '.result.analysis'
+```
 
 ## Changelog
 

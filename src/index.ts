@@ -8,6 +8,7 @@ import { registerFeedCommand } from "./commands/feed.js";
 import { registerAllocatorCommands } from "./commands/allocator.js";
 import { registerLpCommands } from "./commands/lp.js";
 import { registerWalletCommands } from "./commands/wallet.js";
+import { registerSignalCommands } from "./commands/signal.js";
 import * as out from "./output.js";
 
 const program = new Command();
@@ -31,6 +32,7 @@ registerFeedCommand(program);
 registerWalletCommands(program);
 registerLpCommands(program);
 registerAllocatorCommands(program);
+registerSignalCommands(program);
 
 program.hook("preAction", (_thisCommand, actionCommand) => {
   const opts = program.opts();
