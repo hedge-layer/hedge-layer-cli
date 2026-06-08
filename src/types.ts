@@ -343,6 +343,86 @@ export interface AllocatorCycleApiResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Signal analysis — mirrors POST /api/signal/analyze
+// ---------------------------------------------------------------------------
+
+export interface SignalMarketInput {
+  market_name?: string;
+  name?: string;
+  question?: string;
+  title?: string;
+  market_description?: string;
+  description?: string;
+  rules?: string;
+  yes_pct?: number;
+  yes_prob?: number;
+  current_yes_prob?: number;
+  yesPrice?: number;
+  no_pct?: number;
+  no_prob?: number;
+  current_no_prob?: number;
+  noPrice?: number;
+  market_link?: string;
+  link?: string;
+  url?: string;
+  market_slug?: string;
+  slug?: string;
+  created_at?: string;
+  createdAt?: string;
+  end_date?: string;
+  endDate?: string;
+  end_date_iso?: string;
+  [key: string]: unknown;
+}
+
+export interface SignalAnalysisRequest {
+  url?: string;
+  urls?: string[];
+  market?: SignalMarketInput;
+  markets?: SignalMarketInput[];
+  previous_analysis_context?: string;
+}
+
+export interface SignalAnalysis {
+  market_slug?: string;
+  market_name?: string;
+  market_link?: string;
+  current_yes_prob?: number | null;
+  current_no_prob?: number | null;
+  predicted_prob?: number | null;
+  confidence?: string;
+  research_findings?: string;
+  bayesian_reasoning?: string;
+  key_factors?: string[];
+  probability_gap?: number | null;
+  signal_strength?: "strong" | "weak" | "unknown" | string;
+  timestamp?: string;
+  [key: string]: unknown;
+}
+
+export interface SignalAnalysisItem {
+  agent?: string;
+  analysis?: SignalAnalysis;
+  raw_response?: string;
+  [key: string]: unknown;
+}
+
+export interface SignalAnalysisResult extends SignalAnalysisItem {
+  error?: string;
+  analyses?: SignalAnalysisItem[];
+  markets_analyzed?: number;
+  strong_signal_count?: number;
+  summary?: Record<string, unknown>;
+  memory?: Record<string, unknown>;
+}
+
+export interface SignalAnalysisApiResponse {
+  mode?: string;
+  result?: SignalAnalysisResult;
+  error?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Persisted LP workflow API responses
 // ---------------------------------------------------------------------------
 
