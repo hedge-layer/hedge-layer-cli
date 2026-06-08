@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-06-09
+
+### Added
+
+- `hl signal analyze` — call the Hedge Layer signal agent from the terminal to estimate true YES probability, compare it with current market pricing, and display probability gap, signal strength, confidence, key factors, and research findings.
+- Signal analysis supports Polymarket URL input, repeated `--url` values, prior search context via `--context`, and inline market JSON from a file or stdin.
+
 ### Changed
 
 - `hl research show` and `hl research delete` now accept the short 8-character session ID printed by `hl research list` (in addition to the full UUID), resolving it automatically. Unknown or ambiguous IDs produce a clear, actionable error instead of `API error 400: Invalid assessment ID`.
@@ -160,6 +167,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Global options: `--json`, `--api-url`, `--token`, `--verbose`, `--no-color`
 - Token storage in `~/.hedgelayer/config.json`
 
+[1.8.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.8.0
 [1.7.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.7.0
 [1.6.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.6.0
 [1.5.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.5.0
