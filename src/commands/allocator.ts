@@ -11,6 +11,7 @@ import type {
   AllocatorAllocationInput,
   AllocatorCycleApiResponse,
   AllocatorCycleRequest,
+  AllocatorMarketInput,
   AllocatorStrategyInput,
   FeedResult,
   GlobalOptions,
@@ -39,19 +40,14 @@ interface AllocatorCycleOpts {
   perMarketLimit: number;
   minExpectedReturnDailyPct: number;
   maxInventoryImbalance: number;
-  maxOrderNotional: number;
-  quoteEdgeBps: number;
-  rewardQuoteEdgeBps: number;
-  defensiveQuoteEdgeBps: number;
   volatilityFillSpikeThreshold: number;
   eventNoQuoteMinutesBefore: number;
   eventNoQuoteMinutesAfter: number;
-  maxNetExposure: number;
-  hedgingEnabled?: boolean;
   allocatorMinLiquidity: number;
   maxSpread: number;
   allocatorMinDaysToEnd: number;
   maxMarkets: number;
+  markets?: string;
   allocations?: string;
   repeat?: boolean;
   paused?: boolean;
@@ -125,15 +121,9 @@ function strategyFromOptions(opts: AllocatorCycleOpts): AllocatorStrategyInput {
     per_market_limit: opts.perMarketLimit,
     min_expected_return_daily_pct: opts.minExpectedReturnDailyPct,
     max_inventory_imbalance: opts.maxInventoryImbalance,
-    max_order_notional: opts.maxOrderNotional,
-    quote_edge_bps: opts.quoteEdgeBps,
-    reward_quote_edge_bps: opts.rewardQuoteEdgeBps,
-    defensive_quote_edge_bps: opts.defensiveQuoteEdgeBps,
     volatility_fill_spike_threshold: opts.volatilityFillSpikeThreshold,
     event_no_quote_minutes_before: opts.eventNoQuoteMinutesBefore,
     event_no_quote_minutes_after: opts.eventNoQuoteMinutesAfter,
-    max_net_exposure: opts.maxNetExposure,
-    hedging_enabled: Boolean(opts.hedgingEnabled),
     min_liquidity: opts.allocatorMinLiquidity,
     max_spread: opts.maxSpread,
     min_days_to_end: opts.allocatorMinDaysToEnd,
@@ -162,6 +152,19 @@ async function readAllocations(path: string | undefined): Promise<AllocatorAlloc
   return parsed as AllocatorAllocationInput[];
 }
 
+export async function readMarketPayload(path: string | undefined): Promise<AllocatorMarketInput[] | undefined> {
+  if (!path) return undefined;
+  const raw = path === "-" ? await readStdin() : await readFile(path, "utf8");
+  const parsed = JSON.parse(raw) as unknown;
+  if (Array.isArray(parsed)) {
+    return parsed as AllocatorMarketInput[];
+  }
+  if (parsed && typeof parsed === "object" && Array.isArray((parsed as { markets?: unknown }).markets)) {
+    return (parsed as { markets: AllocatorMarketInput[] }).markets;
+  }
+  throw new Error("Markets JSON must be an array or { markets: [...] }");
+}
+
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) {
@@ -184,7 +187,7 @@ export function registerAllocatorCommands(program: Command): void {
 
   allocator
     .command("cycle")
-    .description("Find LP candidates from /api/feed and run a dry-run allocator cycle")
+    .description("Run a dry-run allocator cycle from explicit markets or /api/feed candidates")
     .argument(
       "[screening]",
       `Optional screening preset: ${PROFILE_CHOICES.join(" | ")} (same as --profile)`,
@@ -209,19 +212,14 @@ export function registerAllocatorCommands(program: Command): void {
     .option("--per-market-limit <usd>", "Per-market target cap", parseNonNegative, 100)
     .option("--min-expected-return-daily-pct <pct>", "Minimum expected daily return percent", parseNonNegative, 0.02)
     .option("--max-inventory-imbalance <ratio>", "Maximum inventory imbalance", parseNonNegative, 0.25)
-    .option("--max-order-notional <usd>", "Maximum notional per planned passive order", parseNonNegative, 25)
-    .option("--quote-edge-bps <bps>", "Passive quote edge in basis points", parseNonNegative, 100)
-    .option("--reward-quote-edge-bps <bps>", "Tighter edge for reward-optimized quote mode", parseNonNegative, 50)
-    .option("--defensive-quote-edge-bps <bps>", "Wider edge for defensive quote mode", parseNonNegative, 300)
     .option("--volatility-fill-spike-threshold <ratio>", "Fill-rate imbalance that switches quotes to defensive mode", parseNonNegative, 0.35)
     .option("--event-no-quote-minutes-before <n>", "Cancel/no-quote window before scheduled events", parseNonNegative, 60)
     .option("--event-no-quote-minutes-after <n>", "Cancel/no-quote window after scheduled events", parseNonNegative, 30)
-    .option("--max-net-exposure <usd>", "Maximum net per-market exposure before cancel/reduce recommendations", parseNonNegative, 100)
-    .option("--hedging-enabled", "Emit dry-run cross-venue hedge recommendations when routes are supplied")
     .option("--allocator-min-liquidity <usd>", "Allocator safety gate: minimum market liquidity", parseNonNegative, 500)
     .option("--max-spread <ratio>", "Allocator safety gate: maximum spread", parseNonNegative, 0.12)
     .option("--allocator-min-days-to-end <n>", "Allocator safety gate: minimum days to resolution", parseNonNegative, 3)
     .option("--max-markets <n>", "Maximum markets allocator may target", parsePositiveInt, 5)
+    .option("--markets <file>", "Candidate market JSON array or { markets }; use '-' to read stdin")
     .option("--allocations <file>", "Existing allocations JSON array; use '-' to read stdin")
     .option("--repeat", "Run a second cycle using targets returned by the first cycle")
     .option("--paused", "Send strategy status paused instead of dry_run")
@@ -231,37 +229,48 @@ export function registerAllocatorCommands(program: Command): void {
       requireAuth(client);
       validatePercentageSizing(o);
 
-      let profile = o.profile ?? screening ?? "lp-opportunity";
-      if (!isProfile(profile)) {
-        out.error(`Unknown screening "${profile}". Use: ${PROFILE_CHOICES.join(" or ")}`);
-        process.exit(1);
-      }
-      if (o.profile && screening && screening !== "lp-opportunity" && o.profile !== screening) {
-        out.warn(`Both positional and --profile set; using --profile (${o.profile}).`);
-        profile = o.profile;
-      }
-
-      const feed = await client.get<FeedResult>("/api/feed", feedQueryParams(profile, o));
-      if (feed.error) {
-        out.error(feed.error);
-        process.exit(1);
-      }
-      if (feed.markets.length === 0) {
-        out.warn("No feed markets matched the allocator criteria.");
-        return;
-      }
-
       const allocations = await readAllocations(o.allocations);
+      const explicitMarkets = await readMarketPayload(o.markets);
+      let markets;
+      let sourceLabel: string;
+
+      if (explicitMarkets) {
+        markets = explicitMarkets;
+        sourceLabel = "provided";
+      } else {
+        let profile = o.profile ?? screening ?? "lp-opportunity";
+        if (!isProfile(profile)) {
+          out.error(`Unknown screening "${profile}". Use: ${PROFILE_CHOICES.join(" or ")}`);
+          process.exit(1);
+        }
+        if (o.profile && screening && screening !== "lp-opportunity" && o.profile !== screening) {
+          out.warn(`Both positional and --profile set; using --profile (${o.profile}).`);
+          profile = o.profile;
+        }
+
+        const feed = await client.get<FeedResult>("/api/feed", feedQueryParams(profile, o));
+        if (feed.error) {
+          out.error(feed.error);
+          process.exit(1);
+        }
+        if (feed.markets.length === 0) {
+          out.warn("No feed markets matched the allocator criteria.");
+          return;
+        }
+        markets = feedMarketsToAllocatorMarkets(feed.markets);
+        sourceLabel = profile;
+      }
+
       const payload: AllocatorCycleRequest = {
         strategy: strategyFromOptions(o),
-        markets: feedMarketsToAllocatorMarkets(feed.markets),
+        markets,
         allocations,
       };
 
       if (!globalOpts.json) {
         process.stderr.write(
           chalk.dim(
-            `  Running allocator dry-run on ${feed.markets.length} ${profile} candidates...\n`,
+            `  Running allocator dry-run on ${markets.length} ${sourceLabel} candidates...\n`,
           ),
         );
       }

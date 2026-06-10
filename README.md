@@ -82,11 +82,11 @@ hl lp evaluate                         # summarize PnL lessons
 hl lp run                              # run the dry-run chain
 ```
 
-For lower-level allocator dry-runs, `hl allocator cycle` accepts risk-control
-flags for quote regime edges, fill-spike detection, scheduled-event no-quote
-windows, max net exposure, and dry-run hedge recommendations. Its output shows
-quote regime, planned cancels, hedge recommendations, and split spread/reward
-economics when the allocator agent returns them.
+For lower-level allocator dry-runs, `hl allocator cycle --markets markets.json`
+submits an explicit candidate market list through the web API to the allocator
+agent. Without `--markets`, the command keeps the existing convenience path of
+fetching candidates from `/api/feed`. Allocator output shows quote regime and
+split spread/reward economics when the allocator agent returns them.
 
 Wallet commands are available under `hl wallet`:
 

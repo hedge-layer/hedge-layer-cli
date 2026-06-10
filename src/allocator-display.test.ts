@@ -80,7 +80,6 @@ describe("allocationsFromDecisions", () => {
           market_slug: "market-a",
           action: "ALLOCATE",
           target_capital: 100,
-          order_plan: [{ notional: 25 }, { notional: 15 }],
         },
       ]),
     ).toEqual([
@@ -91,7 +90,7 @@ describe("allocationsFromDecisions", () => {
         locked_capital: 0,
         inventory_yes: 0,
         inventory_no: 0,
-        open_order_notional: 40,
+        open_order_notional: 0,
       },
     ]);
   });

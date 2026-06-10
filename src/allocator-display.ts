@@ -65,9 +65,7 @@ export function allocationsFromDecisions(
       locked_capital: 0,
       inventory_yes: 0,
       inventory_no: 0,
-      open_order_notional: Array.isArray(d.order_plan)
-        ? d.order_plan.reduce((sum, order) => sum + num(order.notional), 0)
-        : 0,
+      open_order_notional: 0,
     }));
 }
 
@@ -89,8 +87,7 @@ export function displayAllocatorCycleResult(
     chalk.dim(
       `  ${num(result.total_markets, decisions.length)} markets · ${out.currency(
         num(summary.target_capital),
-      )} target capital · ${num(summary.orders_planned)} planned orders · ` +
-        `${num(summary.cancels_planned)} cancels · ${num(summary.hedges_planned)} hedges\n\n`,
+      )} target capital\n\n`,
     ),
   );
 
@@ -103,11 +100,6 @@ export function displayAllocatorCycleResult(
     const action = String(d.action ?? "UNKNOWN");
     const score = num(d.score?.score);
     const expected = num(d.score?.expected_return_daily_pct);
-    const orders = Array.isArray(d.order_plan) ? d.order_plan.length : 0;
-    const cancels = Array.isArray(d.cancel_plan) ? d.cancel_plan.length : 0;
-    const hedges = Array.isArray(d.hedge_plan)
-      ? d.hedge_plan.filter((hedge) => hedge.status === "recommended").length
-      : 0;
     const failedChecks = Array.isArray(d.safety_checks)
       ? d.safety_checks.filter((check) => check.passed === false).length
       : 0;
@@ -119,9 +111,6 @@ export function displayAllocatorCycleResult(
       `${expected.toFixed(3)}%`,
       regimeLabel(String(d.quote_regime ?? "—")),
       String(Math.round(score)),
-      String(orders),
-      cancels === 0 ? chalk.dim("0") : chalk.yellow(String(cancels)),
-      hedges === 0 ? chalk.dim("0") : chalk.cyan(String(hedges)),
       failedChecks === 0 ? chalk.green("0") : chalk.yellow(String(failedChecks)),
     ];
   });
@@ -134,9 +123,6 @@ export function displayAllocatorCycleResult(
     "Exp/day",
     "Regime",
     "Score",
-    "Orders",
-    "Cxl",
-    "Hedge",
     "Fails",
   ]);
 
@@ -150,7 +136,6 @@ export function displayAllocatorCycleResult(
     }
     process.stdout.write("\n");
 
-    const orders = Array.isArray(decision.order_plan) ? decision.order_plan : [];
     const economics = decision.economics ?? {};
     if (
       economics.realized_spread_pnl !== undefined ||
@@ -163,33 +148,6 @@ export function displayAllocatorCycleResult(
           `spread ${signedCurrency(num(economics.realized_spread_pnl))}, ` +
           `rewards ${signedCurrency(num(economics.reward_income))}, ` +
           `net ${signedCurrency(num(economics.net_realized_pnl))}` +
-          "\n",
-      );
-    }
-    for (const order of orders.slice(0, 2)) {
-      process.stdout.write(
-        "    " +
-          chalk.dim("Order: ") +
-          `${String(order.side ?? "BUY")} ${String(order.outcome ?? "?")} @ ${num(order.price).toFixed(3)} ` +
-          `for ${out.currency(num(order.notional))}` +
-          "\n",
-      );
-    }
-    if (orders.length > 2) {
-      process.stdout.write(chalk.dim(`    … ${orders.length - 2} more orders\n`));
-    }
-    const cancels = Array.isArray(decision.cancel_plan) ? decision.cancel_plan : [];
-    if (cancels.length > 0) {
-      process.stdout.write(chalk.dim(`    Cancel: ${cancels.length} resting order intent(s)\n`));
-    }
-    const hedges = Array.isArray(decision.hedge_plan) ? decision.hedge_plan : [];
-    for (const hedge of hedges.slice(0, 1)) {
-      if (hedge.status !== "recommended") continue;
-      process.stdout.write(
-        "    " +
-          chalk.dim("Hedge: ") +
-          `${String(hedge.direction ?? "?")} ${String(hedge.instrument ?? hedge.venue ?? "?")} ` +
-          `for ${out.currency(num(hedge.estimated_notional))}` +
           "\n",
       );
     }
