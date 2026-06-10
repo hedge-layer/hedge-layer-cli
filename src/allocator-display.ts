@@ -1,9 +1,6 @@
 import chalk from "chalk";
 import type {
-  AllocatorAllocationInput,
   AllocatorCycleResult,
-  AllocatorDecision,
-  FeedResultMarket,
   GlobalOptions,
 } from "./types.js";
 import * as out from "./output.js";
@@ -28,45 +25,6 @@ function actionColor(action: string): string {
 function num(value: unknown, fallback = 0): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
-}
-
-export function feedMarketsToAllocatorMarkets(markets: FeedResultMarket[]) {
-  return markets.slice(0, 25).map((m) => {
-    const probability = num(m.probability ?? m.yesPrice, 0.5);
-    const daysToEnd =
-      m.daysToEnd == null || m.daysToEnd === undefined ? undefined : num(m.daysToEnd);
-    return {
-      slug: String(m.slug ?? ""),
-      question: String(m.question ?? ""),
-      yesTokenId: m.yesTokenId ? String(m.yesTokenId) : undefined,
-      noTokenId: m.noTokenId ? String(m.noTokenId) : undefined,
-      yesPrice: num(m.yesPrice, probability),
-      noPrice: num(m.noPrice, 1 - probability),
-      liquidity: num(m.liquidity),
-      volume24h: num(m.volume24h),
-      spread: num(m.spread),
-      rewardsDailyRate: num(m.rewardsDailyRate),
-      oneDayPriceChange: num(m.oneDayPriceChange),
-      ...(daysToEnd !== undefined && { daysToEnd }),
-      active: m.active == null ? true : Boolean(m.active),
-    };
-  });
-}
-
-export function allocationsFromDecisions(
-  decisions: AllocatorDecision[],
-): AllocatorAllocationInput[] {
-  return decisions
-    .filter((d) => String(d.market_slug ?? ""))
-    .map((d) => ({
-      market_slug: String(d.market_slug),
-      status: String(d.action ?? "planned").toLowerCase(),
-      allocated_capital: num(d.target_capital),
-      locked_capital: 0,
-      inventory_yes: 0,
-      inventory_no: 0,
-      open_order_notional: 0,
-    }));
 }
 
 export function displayAllocatorCycleResult(

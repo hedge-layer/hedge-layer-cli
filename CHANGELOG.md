@@ -9,11 +9,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 - `hl lp allocator --markets <file>` can now submit an explicit candidate market JSON array, or `{ "markets": [...] }`, through the web API to the allocator agent, matching the direct-payload pattern used by `hl signal analyze --market`.
-- `hl allocator cycle` now exposes dry-run risk controls for reward-optimized vs. defensive quote edges, one-sided fill-spike detection, and scheduled-event no-quote windows.
 
 ### Changed
 
-- Allocator cycle output now shows quote regime and split spread/reward/net economics when those fields are returned by the allocator agent.
+- Allocator output now shows quote regime and split spread/reward/net economics when those fields are returned by the allocator agent.
+
+### Removed
+
+- Removed the top-level `hl allocator cycle` command and its feed-fetch/repeat-cycle convenience flow. Use `hl feed` followed by `hl lp allocator --markets <file>` instead.
 
 ## [1.8.0] - 2026-06-09
 
