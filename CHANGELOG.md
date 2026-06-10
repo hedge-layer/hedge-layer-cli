@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-06-10
+
 ### Added
 
 - `hl lp allocator --markets <file>` can now submit an explicit candidate market JSON array, or `{ "markets": [...] }`, through the web API to the allocator agent, matching the direct-payload pattern used by `hl signal analyze --market`.
