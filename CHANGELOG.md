@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- `hl allocator cycle` now exposes dry-run risk controls for reward-optimized vs. defensive quote edges, one-sided fill-spike detection, scheduled-event no-quote windows, max net exposure, and optional hedge recommendation output.
+
+### Changed
+
+- Allocator cycle output now shows quote regime, planned cancel count, dry-run hedge recommendation count, and split spread/reward/net economics when those fields are returned by the allocator agent.
+
 ## [1.8.0] - 2026-06-09
 
 ### Added
