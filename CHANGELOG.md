@@ -13,10 +13,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 - Allocator output now shows quote regime and split spread/reward/net economics when those fields are returned by the allocator agent.
+- `hl lp allocator --markets <file>` now calls `POST /api/lp/allocator` instead of the removed `POST /api/allocator/cycle` endpoint.
 
 ### Removed
 
 - Removed the top-level `hl allocator cycle` command and its feed-fetch/repeat-cycle convenience flow. Use `hl feed` followed by `hl lp allocator --markets <file>` instead.
+- Removed `hl lp run` because the web app no longer exposes the scheduled/full-loop LP run endpoint.
 
 ## [1.8.0] - 2026-06-09
 

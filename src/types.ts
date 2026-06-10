@@ -222,7 +222,7 @@ export interface GlobalOptions {
 }
 
 // ---------------------------------------------------------------------------
-// Allocator cycle — mirrors POST /api/allocator/cycle
+// Allocator recommendation — mirrors POST /api/lp/allocator
 // ---------------------------------------------------------------------------
 
 export interface AllocatorStrategyInput {
@@ -493,19 +493,6 @@ export interface LpEvaluateResponse {
   syncError: string | null;
   summary: LpEvaluationSummary;
   lessons: LpPnlLesson[];
-  error?: string;
-}
-
-export interface LpRunResponse {
-  mode?: string;
-  cycleId: string;
-  scanId?: string;
-  strategyId: string;
-  opportunitiesFound: number;
-  pnlSynced: boolean;
-  approvalRequired: boolean;
-  decisions: AllocatorDecision[];
-  result: AllocatorCycleResult;
   error?: string;
 }
 

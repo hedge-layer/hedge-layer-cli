@@ -12,7 +12,6 @@ import {
 import {
   displayLpEvaluateResult,
   displayLpRecommendResult,
-  displayLpRunResult,
   displayLpScanResult,
 } from "../lp-display.js";
 import type {
@@ -22,7 +21,6 @@ import type {
   AllocatorStrategyInput,
   LpEvaluateResponse,
   LpRecommendResponse,
-  LpRunResponse,
   LpScanResponse,
 } from "../types.js";
 import * as out from "../output.js";
@@ -57,13 +55,6 @@ interface LpEvaluateOpts {
   walletAddress?: string;
   syncPnl?: boolean;
   limit?: number;
-  output?: string;
-}
-
-interface LpRunOpts {
-  strategyId?: string;
-  limit?: number;
-  syncPnl?: boolean;
   output?: string;
 }
 
@@ -194,19 +185,11 @@ export function buildLpEvaluatePayload(opts: LpEvaluateOpts) {
   });
 }
 
-export function buildLpRunPayload(opts: LpRunOpts) {
-  return compact({
-    strategyId: opts.strategyId,
-    limit: opts.limit,
-    syncPnl: opts.syncPnl,
-  });
-}
-
 async function runAllocatorCycle(
   client: ApiClient,
   payload: AllocatorCycleRequest,
 ): Promise<AllocatorCycleApiResponse> {
-  return client.post<AllocatorCycleApiResponse>("/api/allocator/cycle", payload);
+  return client.post<AllocatorCycleApiResponse>("/api/lp/allocator", payload);
 }
 
 export function registerLpCommands(program: Command): void {
@@ -222,7 +205,7 @@ export function registerLpCommands(program: Command): void {
     .option("--total-holdings <usd>", "Total holdings / portfolio value used for percentage sizing", parsePositiveNumber)
     .option("--capital-limit-pct <pct>", "Portfolio-level allocation cap as a percent of total holdings", parsePositiveNumber)
     .option("--per-market-limit-pct <pct>", "Per-market target cap as a percent of total holdings", parsePositiveNumber)
-    .option("--capital-limit <usd>", "Portfolio capital limit for this cycle", parseNonNegative, 500)
+    .option("--capital-limit <usd>", "Portfolio capital limit for this allocator request", parseNonNegative, 500)
     .option("--per-market-limit <usd>", "Per-market target cap", parseNonNegative, 100)
     .option("--min-expected-return-daily-pct <pct>", "Minimum expected daily return percent", parseNonNegative, 0.02)
     .option("--max-inventory-imbalance <ratio>", "Maximum inventory imbalance", parseNonNegative, 0.25)
@@ -339,38 +322,4 @@ export function registerLpCommands(program: Command): void {
       displayLpEvaluateResult(result, globalOpts);
     });
 
-  lp
-    .command("run")
-    .description("Run scan, recommendation, and evaluation as one dry-run chain")
-    .option("--strategy-id <uuid>", "LP strategy id")
-    .option("--limit <n>", "Max candidates to scan/recommend (1-25, default 15)", parsePositiveInt, 15)
-    .option("--no-sync-pnl", "Use existing PnL snapshots without refreshing")
-    .option("--output <file>", "Write the chained run JSON response to a local file")
-    .action(async (opts: LpRunOpts) => {
-      const globalOpts = program.opts<GlobalOptions>();
-      const client = new ApiClient(globalOpts);
-      requireAuth(client);
-
-      const run = await client.post<LpRunResponse>(
-        "/api/lp/run",
-        buildLpRunPayload(opts),
-      );
-      let evaluation: LpEvaluateResponse | null = null;
-      try {
-        evaluation = await client.post<LpEvaluateResponse>("/api/lp/evaluate", {
-          strategyId: run.strategyId,
-          syncPnl: false,
-        });
-      } catch (error) {
-        if (!globalOpts.json) {
-          out.warn(
-            `Could not load evaluation summary: ${error instanceof Error ? error.message : String(error)}`,
-          );
-        }
-      }
-
-      const combined = { run, evaluation };
-      await writeArtifact(opts.output, combined, Boolean(globalOpts.json));
-      displayLpRunResult(combined, globalOpts);
-    });
 }

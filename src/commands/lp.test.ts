@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildLpEvaluatePayload,
   buildLpRecommendPayload,
-  buildLpRunPayload,
   buildLpScanPayload,
 } from "./lp.js";
 
@@ -39,14 +38,10 @@ describe("LP command payload builders", () => {
     });
   });
 
-  it("preserves disabled PnL sync for evaluation and chained runs", () => {
+  it("preserves disabled PnL sync for evaluation", () => {
     expect(buildLpEvaluatePayload({ syncPnl: false, limit: 20 })).toEqual({
       syncPnl: false,
       limit: 20,
-    });
-    expect(buildLpRunPayload({ syncPnl: false, limit: 15 })).toEqual({
-      syncPnl: false,
-      limit: 15,
     });
   });
 });

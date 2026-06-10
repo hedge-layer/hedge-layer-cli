@@ -56,10 +56,10 @@ hl brief "US China trade war tariffs"
 # 4. Or start an interactive research session
 hl research
 
-# 5. Run the persisted liquidity-provider loop
-hl lp scan "liquidity opportunities"
-hl lp recommend --scan-id <scan-id>
-hl lp evaluate
+# 5. Run the manual liquidity-provider flow
+hl --json feed liquidity-provider --limit 15 | jq '{ markets: .markets }' > markets.json
+hl lp allocator --markets markets.json
+hl-trader buy
 
 # 6. Check linked wallet funds
 hl wallet balances
@@ -80,7 +80,6 @@ hl lp scan "liquidity opportunities"   # persist candidate evidence
 hl lp allocator --markets markets.json # run allocator agent on an explicit list
 hl lp recommend --scan-id <scan-id>    # recommend allocate/reduce/exit actions
 hl lp evaluate                         # summarize PnL lessons
-hl lp run                              # run the dry-run chain
 ```
 
 The lightweight manual loop is:
