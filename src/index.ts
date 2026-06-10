@@ -5,7 +5,6 @@ import { registerBriefCommands } from "./commands/brief.js";
 import { registerProfileCommand } from "./commands/profile.js";
 import { registerResearchCommands } from "./commands/research.js";
 import { registerFeedCommand } from "./commands/feed.js";
-import { registerAllocatorCommands } from "./commands/allocator.js";
 import { registerLpCommands } from "./commands/lp.js";
 import { registerWalletCommands } from "./commands/wallet.js";
 import { registerSignalCommands } from "./commands/signal.js";
@@ -31,7 +30,6 @@ registerResearchCommands(program);
 registerFeedCommand(program);
 registerWalletCommands(program);
 registerLpCommands(program);
-registerAllocatorCommands(program);
 registerSignalCommands(program);
 
 program.hook("preAction", (_thisCommand, actionCommand) => {

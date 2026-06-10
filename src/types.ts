@@ -222,7 +222,7 @@ export interface GlobalOptions {
 }
 
 // ---------------------------------------------------------------------------
-// Allocator cycle — mirrors POST /api/allocator/cycle
+// Allocator recommendation — mirrors POST /api/lp/allocator
 // ---------------------------------------------------------------------------
 
 export interface AllocatorStrategyInput {
@@ -239,12 +239,13 @@ export interface AllocatorStrategyInput {
   per_market_limit?: number;
   min_expected_return_daily_pct?: number;
   max_inventory_imbalance?: number;
-  max_order_notional?: number;
-  quote_edge_bps?: number;
   min_liquidity?: number;
   max_spread?: number;
   min_days_to_end?: number;
   max_markets?: number;
+  volatility_fill_spike_threshold?: number;
+  event_no_quote_minutes_before?: number;
+  event_no_quote_minutes_after?: number;
 }
 
 export interface AllocatorMarketInput {
@@ -261,6 +262,13 @@ export interface AllocatorMarketInput {
   oneDayPriceChange?: number;
   daysToEnd?: number;
   active?: boolean;
+  eventRisk?: "low" | "medium" | "high" | "unknown";
+  scheduledEvents?: Record<string, unknown>[];
+  recentFillRateYes?: number;
+  recentFillRateNo?: number;
+  bookImbalance?: number;
+  rewardProgramEnd?: string;
+  resolutionSourceQuality?: number;
 }
 
 export interface AllocatorAllocationInput {
@@ -271,6 +279,10 @@ export interface AllocatorAllocationInput {
   inventory_yes?: number;
   inventory_no?: number;
   open_order_notional?: number;
+  inventory_value?: number;
+  realized_spread_pnl?: number;
+  reward_income?: number;
+  fees?: number;
   [key: string]: unknown;
 }
 
@@ -278,17 +290,6 @@ export interface AllocatorCycleRequest {
   strategy?: AllocatorStrategyInput;
   markets: AllocatorMarketInput[];
   allocations?: AllocatorAllocationInput[];
-}
-
-export interface AllocatorOrderPlan {
-  side?: string;
-  outcome?: string;
-  token_id?: string;
-  price?: number;
-  size?: number;
-  notional?: number;
-  type?: string;
-  post_only?: boolean;
 }
 
 export interface AllocatorSafetyCheck {
@@ -313,7 +314,18 @@ export interface AllocatorDecision {
     [key: string]: unknown;
   };
   safety_checks?: AllocatorSafetyCheck[];
-  order_plan?: AllocatorOrderPlan[];
+  quote_regime?: "reward_optimized" | "defensive" | "no_quote";
+  inventory_status?: Record<string, unknown>;
+  economics?: {
+    estimated_reward_yield_daily_pct?: number;
+    estimated_spread_capture_daily_pct?: number;
+    estimated_risk_penalty_daily_pct?: number;
+    realized_spread_pnl?: number;
+    reward_income?: number;
+    fees?: number;
+    net_realized_pnl?: number;
+    [key: string]: unknown;
+  };
   rationale?: string;
   [key: string]: unknown;
 }
@@ -329,7 +341,7 @@ export interface AllocatorCycleResult {
   summary?: {
     actions?: Record<string, number>;
     target_capital?: number;
-    orders_planned?: number;
+    economics?: Record<string, unknown>;
     [key: string]: unknown;
   };
   [key: string]: unknown;
@@ -481,19 +493,6 @@ export interface LpEvaluateResponse {
   syncError: string | null;
   summary: LpEvaluationSummary;
   lessons: LpPnlLesson[];
-  error?: string;
-}
-
-export interface LpRunResponse {
-  mode?: string;
-  cycleId: string;
-  scanId?: string;
-  strategyId: string;
-  opportunitiesFound: number;
-  pnlSynced: boolean;
-  approvalRequired: boolean;
-  decisions: AllocatorDecision[];
-  result: AllocatorCycleResult;
   error?: string;
 }
 

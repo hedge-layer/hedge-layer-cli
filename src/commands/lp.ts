@@ -2,16 +2,25 @@ import { Command, InvalidArgumentError } from "commander";
 import { writeFile } from "node:fs/promises";
 import { ApiClient } from "../client.js";
 import {
+  displayAllocatorCycleResult,
+} from "../allocator-display.js";
+import {
+  parsePositiveNumber,
+  readAllocations,
+  readMarketPayload,
+} from "./allocator.js";
+import {
   displayLpEvaluateResult,
   displayLpRecommendResult,
-  displayLpRunResult,
   displayLpScanResult,
 } from "../lp-display.js";
 import type {
   GlobalOptions,
+  AllocatorCycleApiResponse,
+  AllocatorCycleRequest,
+  AllocatorStrategyInput,
   LpEvaluateResponse,
   LpRecommendResponse,
-  LpRunResponse,
   LpScanResponse,
 } from "../types.js";
 import * as out from "../output.js";
@@ -49,11 +58,24 @@ interface LpEvaluateOpts {
   output?: string;
 }
 
-interface LpRunOpts {
-  strategyId?: string;
-  limit?: number;
-  syncPnl?: boolean;
-  output?: string;
+interface LpAllocatorOpts {
+  markets: string;
+  allocations?: string;
+  totalHoldings?: number;
+  capitalLimitPct?: number;
+  perMarketLimitPct?: number;
+  capitalLimit: number;
+  perMarketLimit: number;
+  minExpectedReturnDailyPct: number;
+  maxInventoryImbalance: number;
+  volatilityFillSpikeThreshold: number;
+  eventNoQuoteMinutesBefore: number;
+  eventNoQuoteMinutesAfter: number;
+  allocatorMinLiquidity: number;
+  maxSpread: number;
+  allocatorMinDaysToEnd: number;
+  maxMarkets: number;
+  paused?: boolean;
 }
 
 function requireAuth(client: ApiClient): void {
@@ -77,6 +99,39 @@ function parsePositiveInt(value: string): number {
     throw new InvalidArgumentError("Expected a positive integer");
   }
   return n;
+}
+
+function strategyFromAllocatorOptions(opts: LpAllocatorOpts): AllocatorStrategyInput {
+  return {
+    id: "cli-lp-allocator",
+    name: "CLI LP allocator dry run",
+    status: opts.paused ? "paused" : "dry_run",
+    ...(opts.totalHoldings !== undefined && { total_holdings: opts.totalHoldings }),
+    ...(opts.capitalLimitPct !== undefined && { capital_limit_pct: opts.capitalLimitPct }),
+    ...(opts.perMarketLimitPct !== undefined && { per_market_limit_pct: opts.perMarketLimitPct }),
+    capital_limit: opts.capitalLimit,
+    per_market_limit: opts.perMarketLimit,
+    min_expected_return_daily_pct: opts.minExpectedReturnDailyPct,
+    max_inventory_imbalance: opts.maxInventoryImbalance,
+    volatility_fill_spike_threshold: opts.volatilityFillSpikeThreshold,
+    event_no_quote_minutes_before: opts.eventNoQuoteMinutesBefore,
+    event_no_quote_minutes_after: opts.eventNoQuoteMinutesAfter,
+    min_liquidity: opts.allocatorMinLiquidity,
+    max_spread: opts.maxSpread,
+    min_days_to_end: opts.allocatorMinDaysToEnd,
+    max_markets: opts.maxMarkets,
+  };
+}
+
+function validateAllocatorPercentageSizing(opts: LpAllocatorOpts): void {
+  const usesPercentageSizing =
+    opts.capitalLimitPct !== undefined || opts.perMarketLimitPct !== undefined;
+  if (usesPercentageSizing && opts.totalHoldings === undefined) {
+    out.error(
+      "Percentage sizing requires --total-holdings so the allocator can convert percentages into dollar caps.",
+    );
+    process.exit(1);
+  }
 }
 
 function compact<T extends Record<string, unknown>>(payload: T): T {
@@ -130,18 +185,69 @@ export function buildLpEvaluatePayload(opts: LpEvaluateOpts) {
   });
 }
 
-export function buildLpRunPayload(opts: LpRunOpts) {
-  return compact({
-    strategyId: opts.strategyId,
-    limit: opts.limit,
-    syncPnl: opts.syncPnl,
-  });
+async function runAllocatorCycle(
+  client: ApiClient,
+  payload: AllocatorCycleRequest,
+): Promise<AllocatorCycleApiResponse> {
+  return client.post<AllocatorCycleApiResponse>("/api/lp/allocator", payload);
 }
 
 export function registerLpCommands(program: Command): void {
   const lp = program
     .command("lp")
     .description("Run persisted liquidity-provider scan, recommendation, and evaluation workflows");
+
+  lp
+    .command("allocator")
+    .description("Run the allocator agent on an explicit market list")
+    .requiredOption("--markets <file>", "Candidate market JSON array or { markets }; use '-' to read stdin")
+    .option("--allocations <file>", "Existing allocations JSON array; use '-' to read stdin")
+    .option("--total-holdings <usd>", "Total holdings / portfolio value used for percentage sizing", parsePositiveNumber)
+    .option("--capital-limit-pct <pct>", "Portfolio-level allocation cap as a percent of total holdings", parsePositiveNumber)
+    .option("--per-market-limit-pct <pct>", "Per-market target cap as a percent of total holdings", parsePositiveNumber)
+    .option("--capital-limit <usd>", "Portfolio capital limit for this allocator request", parseNonNegative, 500)
+    .option("--per-market-limit <usd>", "Per-market target cap", parseNonNegative, 100)
+    .option("--min-expected-return-daily-pct <pct>", "Minimum expected daily return percent", parseNonNegative, 0.02)
+    .option("--max-inventory-imbalance <ratio>", "Maximum inventory imbalance", parseNonNegative, 0.25)
+    .option("--volatility-fill-spike-threshold <ratio>", "Fill-rate imbalance that switches quotes to defensive mode", parseNonNegative, 0.35)
+    .option("--event-no-quote-minutes-before <n>", "No-quote window before scheduled events", parseNonNegative, 60)
+    .option("--event-no-quote-minutes-after <n>", "No-quote window after scheduled events", parseNonNegative, 30)
+    .option("--allocator-min-liquidity <usd>", "Allocator safety gate: minimum market liquidity", parseNonNegative, 500)
+    .option("--max-spread <ratio>", "Allocator safety gate: maximum spread", parseNonNegative, 0.12)
+    .option("--allocator-min-days-to-end <n>", "Allocator safety gate: minimum days to resolution", parseNonNegative, 3)
+    .option("--max-markets <n>", "Maximum markets allocator may target", parsePositiveInt, 5)
+    .option("--paused", "Send strategy status paused instead of dry_run")
+    .action(async (opts: LpAllocatorOpts) => {
+      const globalOpts = program.opts<GlobalOptions>();
+      const client = new ApiClient(globalOpts);
+      requireAuth(client);
+      validateAllocatorPercentageSizing(opts);
+
+      const markets = await readMarketPayload(opts.markets);
+      if (!markets || markets.length === 0) {
+        out.error("Markets JSON must include at least one market.");
+        process.exit(1);
+      }
+
+      const payload: AllocatorCycleRequest = {
+        strategy: strategyFromAllocatorOptions(opts),
+        markets,
+        allocations: await readAllocations(opts.allocations),
+      };
+
+      if (!globalOpts.json) {
+        process.stderr.write(
+          out.dim(`  Running allocator dry-run on ${markets.length} provided candidates...\n`),
+        );
+      }
+
+      const response = await runAllocatorCycle(client, payload);
+      if (globalOpts.json) {
+        out.json(response);
+      } else {
+        displayAllocatorCycleResult(response.result ?? {}, globalOpts);
+      }
+    });
 
   lp
     .command("scan")
@@ -216,38 +322,4 @@ export function registerLpCommands(program: Command): void {
       displayLpEvaluateResult(result, globalOpts);
     });
 
-  lp
-    .command("run")
-    .description("Run scan, recommendation, and evaluation as one dry-run chain")
-    .option("--strategy-id <uuid>", "LP strategy id")
-    .option("--limit <n>", "Max candidates to scan/recommend (1-25, default 15)", parsePositiveInt, 15)
-    .option("--no-sync-pnl", "Use existing PnL snapshots without refreshing")
-    .option("--output <file>", "Write the chained run JSON response to a local file")
-    .action(async (opts: LpRunOpts) => {
-      const globalOpts = program.opts<GlobalOptions>();
-      const client = new ApiClient(globalOpts);
-      requireAuth(client);
-
-      const run = await client.post<LpRunResponse>(
-        "/api/lp/run",
-        buildLpRunPayload(opts),
-      );
-      let evaluation: LpEvaluateResponse | null = null;
-      try {
-        evaluation = await client.post<LpEvaluateResponse>("/api/lp/evaluate", {
-          strategyId: run.strategyId,
-          syncPnl: false,
-        });
-      } catch (error) {
-        if (!globalOpts.json) {
-          out.warn(
-            `Could not load evaluation summary: ${error instanceof Error ? error.message : String(error)}`,
-          );
-        }
-      }
-
-      const combined = { run, evaluation };
-      await writeArtifact(opts.output, combined, Boolean(globalOpts.json));
-      displayLpRunResult(combined, globalOpts);
-    });
 }

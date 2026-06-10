@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-06-10
+
+### Added
+
+- `hl lp allocator --markets <file>` can now submit an explicit candidate market JSON array, or `{ "markets": [...] }`, through the web API to the allocator agent, matching the direct-payload pattern used by `hl signal analyze --market`.
+
+### Changed
+
+- Allocator output now shows quote regime and split spread/reward/net economics when those fields are returned by the allocator agent.
+- `hl lp allocator --markets <file>` now calls `POST /api/lp/allocator` instead of the removed `POST /api/allocator/cycle` endpoint.
+
+### Removed
+
+- Removed the top-level `hl allocator cycle` command and its feed-fetch/repeat-cycle convenience flow. Use `hl feed` followed by `hl lp allocator --markets <file>` instead.
+- Removed `hl lp run` because the web app no longer exposes the scheduled/full-loop LP run endpoint.
+
 ## [1.8.0] - 2026-06-09
 
 ### Added

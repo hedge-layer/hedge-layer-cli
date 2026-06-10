@@ -4,7 +4,6 @@ import type {
   GlobalOptions,
   LpEvaluateResponse,
   LpRecommendResponse,
-  LpRunResponse,
   LpScanResponse,
 } from "./types.js";
 import * as out from "./output.js";
@@ -133,36 +132,4 @@ export function displayLpEvaluateResult(
     ]),
     ["Market", "Outcome", "Net", "Lesson"],
   );
-}
-
-export function displayLpRunResult(
-  result: { run: LpRunResponse; evaluation?: LpEvaluateResponse | null },
-  globalOpts: GlobalOptions,
-): void {
-  if (globalOpts.json) {
-    out.json(result);
-    return;
-  }
-
-  out.heading("LP Run");
-  process.stdout.write(
-    chalk.dim(
-      `  cycle ${result.run.cycleId} · scan ${result.run.scanId ?? "n/a"} · strategy ${result.run.strategyId}\n`,
-    ),
-  );
-  process.stdout.write(
-    chalk.dim(
-      `  ${result.run.opportunitiesFound} opportunities · PnL ${result.run.pnlSynced ? "synced" : "not synced"} · approvals required\n\n`,
-    ),
-  );
-  displayAllocatorCycleResult(result.run.result, globalOpts);
-
-  if (result.evaluation) {
-    process.stdout.write("\n");
-    process.stdout.write(
-      chalk.dim(
-        `  Evaluation: ${signedCurrency(result.evaluation.summary.netPnl)} net PnL across ${result.evaluation.summary.markets} markets\n`,
-      ),
-    );
-  }
 }
