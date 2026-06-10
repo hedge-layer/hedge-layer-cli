@@ -89,7 +89,8 @@ export function displayAllocatorCycleResult(
     chalk.dim(
       `  ${num(result.total_markets, decisions.length)} markets · ${out.currency(
         num(summary.target_capital),
-      )} target capital · ${num(summary.orders_planned)} planned orders\n\n`,
+      )} target capital · ${num(summary.orders_planned)} planned orders · ` +
+        `${num(summary.cancels_planned)} cancels · ${num(summary.hedges_planned)} hedges\n\n`,
     ),
   );
 
@@ -103,6 +104,10 @@ export function displayAllocatorCycleResult(
     const score = num(d.score?.score);
     const expected = num(d.score?.expected_return_daily_pct);
     const orders = Array.isArray(d.order_plan) ? d.order_plan.length : 0;
+    const cancels = Array.isArray(d.cancel_plan) ? d.cancel_plan.length : 0;
+    const hedges = Array.isArray(d.hedge_plan)
+      ? d.hedge_plan.filter((hedge) => hedge.status === "recommended").length
+      : 0;
     const failedChecks = Array.isArray(d.safety_checks)
       ? d.safety_checks.filter((check) => check.passed === false).length
       : 0;
@@ -112,13 +117,28 @@ export function displayAllocatorCycleResult(
       out.currency(num(d.target_capital)),
       signedCurrency(num(d.capital_delta)),
       `${expected.toFixed(3)}%`,
+      regimeLabel(String(d.quote_regime ?? "—")),
       String(Math.round(score)),
       String(orders),
+      cancels === 0 ? chalk.dim("0") : chalk.yellow(String(cancels)),
+      hedges === 0 ? chalk.dim("0") : chalk.cyan(String(hedges)),
       failedChecks === 0 ? chalk.green("0") : chalk.yellow(String(failedChecks)),
     ];
   });
 
-  out.table(rows, ["Market", "Action", "Target", "Delta", "Exp/day", "Score", "Orders", "Fails"]);
+  out.table(rows, [
+    "Market",
+    "Action",
+    "Target",
+    "Delta",
+    "Exp/day",
+    "Regime",
+    "Score",
+    "Orders",
+    "Cxl",
+    "Hedge",
+    "Fails",
+  ]);
 
   process.stdout.write("\n");
   for (const decision of decisions.slice(0, 5)) {
@@ -131,6 +151,21 @@ export function displayAllocatorCycleResult(
     process.stdout.write("\n");
 
     const orders = Array.isArray(decision.order_plan) ? decision.order_plan : [];
+    const economics = decision.economics ?? {};
+    if (
+      economics.realized_spread_pnl !== undefined ||
+      economics.reward_income !== undefined ||
+      economics.net_realized_pnl !== undefined
+    ) {
+      process.stdout.write(
+        "    " +
+          chalk.dim("Economics: ") +
+          `spread ${signedCurrency(num(economics.realized_spread_pnl))}, ` +
+          `rewards ${signedCurrency(num(economics.reward_income))}, ` +
+          `net ${signedCurrency(num(economics.net_realized_pnl))}` +
+          "\n",
+      );
+    }
     for (const order of orders.slice(0, 2)) {
       process.stdout.write(
         "    " +
@@ -143,10 +178,38 @@ export function displayAllocatorCycleResult(
     if (orders.length > 2) {
       process.stdout.write(chalk.dim(`    … ${orders.length - 2} more orders\n`));
     }
+    const cancels = Array.isArray(decision.cancel_plan) ? decision.cancel_plan : [];
+    if (cancels.length > 0) {
+      process.stdout.write(chalk.dim(`    Cancel: ${cancels.length} resting order intent(s)\n`));
+    }
+    const hedges = Array.isArray(decision.hedge_plan) ? decision.hedge_plan : [];
+    for (const hedge of hedges.slice(0, 1)) {
+      if (hedge.status !== "recommended") continue;
+      process.stdout.write(
+        "    " +
+          chalk.dim("Hedge: ") +
+          `${String(hedge.direction ?? "?")} ${String(hedge.instrument ?? hedge.venue ?? "?")} ` +
+          `for ${out.currency(num(hedge.estimated_notional))}` +
+          "\n",
+      );
+    }
   }
 
   if (decisions.length > 5) {
     process.stdout.write(chalk.dim(`\n  … and ${decisions.length - 5} more decisions\n`));
+  }
+}
+
+function regimeLabel(value: string): string {
+  switch (value) {
+    case "reward_optimized":
+      return chalk.green("reward");
+    case "defensive":
+      return chalk.yellow("defense");
+    case "no_quote":
+      return chalk.red("no quote");
+    default:
+      return chalk.dim(value);
   }
 }
 

@@ -41,6 +41,13 @@ interface AllocatorCycleOpts {
   maxInventoryImbalance: number;
   maxOrderNotional: number;
   quoteEdgeBps: number;
+  rewardQuoteEdgeBps: number;
+  defensiveQuoteEdgeBps: number;
+  volatilityFillSpikeThreshold: number;
+  eventNoQuoteMinutesBefore: number;
+  eventNoQuoteMinutesAfter: number;
+  maxNetExposure: number;
+  hedgingEnabled?: boolean;
   allocatorMinLiquidity: number;
   maxSpread: number;
   allocatorMinDaysToEnd: number;
@@ -120,6 +127,13 @@ function strategyFromOptions(opts: AllocatorCycleOpts): AllocatorStrategyInput {
     max_inventory_imbalance: opts.maxInventoryImbalance,
     max_order_notional: opts.maxOrderNotional,
     quote_edge_bps: opts.quoteEdgeBps,
+    reward_quote_edge_bps: opts.rewardQuoteEdgeBps,
+    defensive_quote_edge_bps: opts.defensiveQuoteEdgeBps,
+    volatility_fill_spike_threshold: opts.volatilityFillSpikeThreshold,
+    event_no_quote_minutes_before: opts.eventNoQuoteMinutesBefore,
+    event_no_quote_minutes_after: opts.eventNoQuoteMinutesAfter,
+    max_net_exposure: opts.maxNetExposure,
+    hedging_enabled: Boolean(opts.hedgingEnabled),
     min_liquidity: opts.allocatorMinLiquidity,
     max_spread: opts.maxSpread,
     min_days_to_end: opts.allocatorMinDaysToEnd,
@@ -197,6 +211,13 @@ export function registerAllocatorCommands(program: Command): void {
     .option("--max-inventory-imbalance <ratio>", "Maximum inventory imbalance", parseNonNegative, 0.25)
     .option("--max-order-notional <usd>", "Maximum notional per planned passive order", parseNonNegative, 25)
     .option("--quote-edge-bps <bps>", "Passive quote edge in basis points", parseNonNegative, 100)
+    .option("--reward-quote-edge-bps <bps>", "Tighter edge for reward-optimized quote mode", parseNonNegative, 50)
+    .option("--defensive-quote-edge-bps <bps>", "Wider edge for defensive quote mode", parseNonNegative, 300)
+    .option("--volatility-fill-spike-threshold <ratio>", "Fill-rate imbalance that switches quotes to defensive mode", parseNonNegative, 0.35)
+    .option("--event-no-quote-minutes-before <n>", "Cancel/no-quote window before scheduled events", parseNonNegative, 60)
+    .option("--event-no-quote-minutes-after <n>", "Cancel/no-quote window after scheduled events", parseNonNegative, 30)
+    .option("--max-net-exposure <usd>", "Maximum net per-market exposure before cancel/reduce recommendations", parseNonNegative, 100)
+    .option("--hedging-enabled", "Emit dry-run cross-venue hedge recommendations when routes are supplied")
     .option("--allocator-min-liquidity <usd>", "Allocator safety gate: minimum market liquidity", parseNonNegative, 500)
     .option("--max-spread <ratio>", "Allocator safety gate: maximum spread", parseNonNegative, 0.12)
     .option("--allocator-min-days-to-end <n>", "Allocator safety gate: minimum days to resolution", parseNonNegative, 3)

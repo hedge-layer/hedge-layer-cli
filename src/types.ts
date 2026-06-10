@@ -245,6 +245,13 @@ export interface AllocatorStrategyInput {
   max_spread?: number;
   min_days_to_end?: number;
   max_markets?: number;
+  reward_quote_edge_bps?: number;
+  defensive_quote_edge_bps?: number;
+  volatility_fill_spike_threshold?: number;
+  event_no_quote_minutes_before?: number;
+  event_no_quote_minutes_after?: number;
+  max_net_exposure?: number;
+  hedging_enabled?: boolean;
 }
 
 export interface AllocatorMarketInput {
@@ -261,6 +268,14 @@ export interface AllocatorMarketInput {
   oneDayPriceChange?: number;
   daysToEnd?: number;
   active?: boolean;
+  eventRisk?: "low" | "medium" | "high" | "unknown";
+  scheduledEvents?: Record<string, unknown>[];
+  recentFillRateYes?: number;
+  recentFillRateNo?: number;
+  bookImbalance?: number;
+  rewardProgramEnd?: string;
+  resolutionSourceQuality?: number;
+  correlatedVenues?: Record<string, unknown>[];
 }
 
 export interface AllocatorAllocationInput {
@@ -271,6 +286,13 @@ export interface AllocatorAllocationInput {
   inventory_yes?: number;
   inventory_no?: number;
   open_order_notional?: number;
+  open_orders?: Record<string, unknown>[];
+  net_exposure?: number;
+  inventory_value?: number;
+  realized_spread_pnl?: number;
+  reward_income?: number;
+  fees?: number;
+  hedges?: Record<string, unknown>[];
   [key: string]: unknown;
 }
 
@@ -289,6 +311,26 @@ export interface AllocatorOrderPlan {
   notional?: number;
   type?: string;
   post_only?: boolean;
+}
+
+export interface AllocatorCancelPlan {
+  order_id?: string;
+  token_id?: string;
+  market_slug?: string;
+  scope?: string;
+  notional?: number;
+  reason?: string;
+}
+
+export interface AllocatorHedgePlan {
+  status?: "recommended" | "blocked";
+  venue?: string;
+  instrument?: string;
+  direction?: "BUY" | "SELL";
+  estimated_notional?: number;
+  hedge_ratio?: number;
+  confidence?: number;
+  reason?: string;
 }
 
 export interface AllocatorSafetyCheck {
@@ -313,7 +355,21 @@ export interface AllocatorDecision {
     [key: string]: unknown;
   };
   safety_checks?: AllocatorSafetyCheck[];
+  quote_regime?: "reward_optimized" | "defensive" | "no_quote";
   order_plan?: AllocatorOrderPlan[];
+  cancel_plan?: AllocatorCancelPlan[];
+  hedge_plan?: AllocatorHedgePlan[];
+  inventory_status?: Record<string, unknown>;
+  economics?: {
+    estimated_reward_yield_daily_pct?: number;
+    estimated_spread_capture_daily_pct?: number;
+    estimated_risk_penalty_daily_pct?: number;
+    realized_spread_pnl?: number;
+    reward_income?: number;
+    fees?: number;
+    net_realized_pnl?: number;
+    [key: string]: unknown;
+  };
   rationale?: string;
   [key: string]: unknown;
 }
@@ -330,6 +386,9 @@ export interface AllocatorCycleResult {
     actions?: Record<string, number>;
     target_capital?: number;
     orders_planned?: number;
+    cancels_planned?: number;
+    hedges_planned?: number;
+    economics?: Record<string, unknown>;
     [key: string]: unknown;
   };
   [key: string]: unknown;
