@@ -77,16 +77,24 @@ Liquidity-provider workflows are available under `hl lp`:
 
 ```bash
 hl lp scan "liquidity opportunities"   # persist candidate evidence
+hl lp allocator --markets markets.json # run allocator agent on an explicit list
 hl lp recommend --scan-id <scan-id>    # recommend allocate/reduce/exit actions
 hl lp evaluate                         # summarize PnL lessons
 hl lp run                              # run the dry-run chain
 ```
 
-For lower-level allocator dry-runs, `hl allocator cycle --markets markets.json`
-submits an explicit candidate market list through the web API to the allocator
-agent. Without `--markets`, the command keeps the existing convenience path of
-fetching candidates from `/api/feed`. Allocator output shows quote regime and
-split spread/reward economics when the allocator agent returns them.
+The lightweight manual loop is:
+
+```bash
+hl --json feed lp-opportunity --limit 15 > markets.json
+hl lp allocator --markets markets.json
+hl-trader buy ...
+```
+
+`hl lp allocator` submits the candidate market list through the web API to the
+allocator agent. Allocator output shows target capital, quote regime, failed
+safety checks, and split spread/reward economics. Trade execution stays outside
+the `hl` allocator command.
 
 Wallet commands are available under `hl wallet`:
 

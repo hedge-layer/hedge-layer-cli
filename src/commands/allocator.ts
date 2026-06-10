@@ -142,7 +142,7 @@ function validatePercentageSizing(opts: AllocatorCycleOpts): void {
   }
 }
 
-async function readAllocations(path: string | undefined): Promise<AllocatorAllocationInput[]> {
+export async function readAllocations(path: string | undefined): Promise<AllocatorAllocationInput[]> {
   if (!path) return [];
   const raw = path === "-" ? await readStdin() : await readFile(path, "utf8");
   const parsed = JSON.parse(raw) as unknown;
