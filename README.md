@@ -86,7 +86,8 @@ The lightweight manual loop is:
 
 ```bash
 hl --json feed lp-opportunity --limit 15 > markets.json
-hl lp allocator --markets markets.json
+hl-trader pnl --json > pnl.json   # optional: wallet PnL + live inventory
+hl lp allocator --markets markets.json --pnl pnl.json --allocations pnl.json
 hl-trader buy ...
 ```
 
@@ -94,6 +95,11 @@ hl-trader buy ...
 allocator agent. Allocator output shows target capital, quote regime, failed
 safety checks, and split spread/reward economics. Trade execution stays outside
 the `hl` allocator command.
+
+`--allocations` tells the allocator what you already hold (enabling HOLD,
+REDUCE, and EXIT decisions), and `--pnl` feeds per-market PnL into its caution
+overlay so borderline allocations on losing markets are downgraded to WATCH or
+HOLD. Both flags accept the `hl-trader pnl --json` output file directly.
 
 Wallet commands are available under `hl wallet`:
 

@@ -286,10 +286,28 @@ export interface AllocatorAllocationInput {
   [key: string]: unknown;
 }
 
+export interface AllocatorPnlInput {
+  market_slug: string;
+  realized_pnl?: number;
+  realized_spread_pnl?: number;
+  reward_income?: number;
+  fees?: number;
+  unrealized_pnl?: number;
+  net_pnl?: number;
+  capital_locked?: number;
+  trade_count?: number;
+  closed_position_count?: number;
+  filled_order_count?: number;
+  outcome?: string | null;
+  lesson?: string;
+  [key: string]: unknown;
+}
+
 export interface AllocatorCycleRequest {
   strategy?: AllocatorStrategyInput;
   markets: AllocatorMarketInput[];
   allocations?: AllocatorAllocationInput[];
+  pnl_context?: AllocatorPnlInput[];
 }
 
 export interface AllocatorSafetyCheck {

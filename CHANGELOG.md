@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+- `hl lp allocator --pnl <file>` submits per-market PnL context (a JSON array or `{ "pnl_context": [...] }`, e.g. `hl-trader pnl --json` output) so the allocator's PnL caution overlay can downgrade borderline allocations on markets with negative or locked-loss PnL.
+- `hl lp allocator --allocations <file>` now also accepts an `{ "allocations": [...] }` wrapper, so one `hl-trader pnl --json` file can serve both `--pnl` and `--allocations`.
+
 ## [2.0.0] - 2026-06-10
 
 ### Added
