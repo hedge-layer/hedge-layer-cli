@@ -3,7 +3,12 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-import { parsePositiveNumber, readMarketPayload } from "./allocator.js";
+import {
+  parseAllocationsInput,
+  parsePnlContextInput,
+  parsePositiveNumber,
+  readMarketPayload,
+} from "./allocator.js";
 
 describe("allocator numeric validation", () => {
   it("rejects zero for sizing fields that the API requires to be positive", () => {
@@ -43,5 +48,43 @@ describe("allocator market payload", () => {
 
     await expect(readMarketPayload(path)).rejects.toThrow("Markets JSON must be an array");
     await rm(dir, { recursive: true, force: true });
+  });
+});
+
+describe("allocator allocations input", () => {
+  it("accepts a bare array", () => {
+    const rows = [{ market_slug: "m1", allocated_capital: 10 }];
+    expect(parseAllocationsInput(rows)).toEqual(rows);
+  });
+
+  it("accepts an { allocations } wrapper, e.g. hl-trader pnl --json output", () => {
+    const rows = [{ market_slug: "m1", inventory_yes: 20, inventory_no: 5 }];
+    expect(parseAllocationsInput({ wallet: "0xabc", allocations: rows })).toEqual(rows);
+  });
+
+  it("rejects other shapes", () => {
+    expect(() => parseAllocationsInput({ allocations: "nope" })).toThrow(
+      "Allocations JSON must be an array or { allocations: [...] }",
+    );
+  });
+});
+
+describe("allocator pnl context input", () => {
+  it("accepts a bare array", () => {
+    const rows = [{ market_slug: "m1", realized_pnl: -2.5 }];
+    expect(parsePnlContextInput(rows)).toEqual(rows);
+  });
+
+  it("accepts a { pnl_context } wrapper, e.g. hl-trader pnl --json output", () => {
+    const rows = [
+      { market_slug: "m1", realized_pnl: -2.5, capital_locked: 12, outcome: "loss" },
+    ];
+    expect(parsePnlContextInput({ wallet: "0xabc", pnl_context: rows })).toEqual(rows);
+  });
+
+  it("rejects other shapes", () => {
+    expect(() => parsePnlContextInput(42)).toThrow(
+      "PnL JSON must be an array or { pnl_context: [...] }",
+    );
   });
 });

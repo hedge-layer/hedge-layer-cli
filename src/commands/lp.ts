@@ -8,6 +8,7 @@ import {
   parsePositiveNumber,
   readAllocations,
   readMarketPayload,
+  readPnlContext,
 } from "./allocator.js";
 import {
   displayLpEvaluateResult,
@@ -61,6 +62,7 @@ interface LpEvaluateOpts {
 interface LpAllocatorOpts {
   markets: string;
   allocations?: string;
+  pnl?: string;
   totalHoldings?: number;
   capitalLimitPct?: number;
   perMarketLimitPct?: number;
@@ -201,7 +203,8 @@ export function registerLpCommands(program: Command): void {
     .command("allocator")
     .description("Run the allocator agent on an explicit market list")
     .requiredOption("--markets <file>", "Candidate market JSON array or { markets }; use '-' to read stdin")
-    .option("--allocations <file>", "Existing allocations JSON array; use '-' to read stdin")
+    .option("--allocations <file>", "Existing allocations JSON array or { allocations }; use '-' to read stdin")
+    .option("--pnl <file>", "Per-market PnL context JSON array or { pnl_context } (hl-trader pnl --json output); use '-' to read stdin")
     .option("--total-holdings <usd>", "Total holdings / portfolio value used for percentage sizing", parsePositiveNumber)
     .option("--capital-limit-pct <pct>", "Portfolio-level allocation cap as a percent of total holdings", parsePositiveNumber)
     .option("--per-market-limit-pct <pct>", "Per-market target cap as a percent of total holdings", parsePositiveNumber)
@@ -229,10 +232,17 @@ export function registerLpCommands(program: Command): void {
         process.exit(1);
       }
 
+      if (opts.allocations === "-" && opts.pnl === "-") {
+        out.error("Only one of --allocations and --pnl can read from stdin.");
+        process.exit(1);
+      }
+
+      const pnlContext = await readPnlContext(opts.pnl);
       const payload: AllocatorCycleRequest = {
         strategy: strategyFromAllocatorOptions(opts),
         markets,
         allocations: await readAllocations(opts.allocations),
+        ...(pnlContext.length > 0 && { pnl_context: pnlContext }),
       };
 
       if (!globalOpts.json) {
