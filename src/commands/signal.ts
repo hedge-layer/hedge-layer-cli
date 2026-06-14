@@ -199,21 +199,41 @@ export function extractPlanCandidates(raw: unknown): FeedResultMarket[] {
   return [];
 }
 
+function formatContextValue(value: unknown): string {
+  if (Array.isArray(value)) return value.join(", ");
+  if (value === null || value === undefined || value === "") return "unknown";
+  return String(value);
+}
+
+export function feedContextForCandidate(candidate: FeedResultMarket): string {
+  const sourceProfiles = (candidate as { sourceProfiles?: unknown }).sourceProfiles;
+  const ensembleScore = (candidate as { ensembleScore?: unknown }).ensembleScore;
+  const lpExpectedReturn = candidate.lpExpectedReturnDailyPct;
+  const riskFlags = candidate.lpRiskFlags;
+
+  return [
+    "Feed screening context. Use this as ranking/execution context, not as a replacement for canonical market metadata from the URL.",
+    `Feed rank: ${candidate.rank}`,
+    `Feed score: ${candidate.score}`,
+    `Ensemble score: ${formatContextValue(ensembleScore)}`,
+    `Source profiles: ${formatContextValue(sourceProfiles)}`,
+    `Feed YES price snapshot: ${candidate.yesPrice}`,
+    `Feed NO price snapshot: ${candidate.noPrice}`,
+    `24h volume: ${candidate.volume24h}`,
+    `Liquidity: ${candidate.liquidity}`,
+    `Spread: ${candidate.spread}`,
+    `1d price change: ${candidate.oneDayPriceChange}`,
+    `Days to end: ${formatContextValue(candidate.daysToEnd)}`,
+    `Reward daily rate: ${candidate.rewardsDailyRate}`,
+    `LP expected return daily pct: ${formatContextValue(lpExpectedReturn)}`,
+    `LP risk flags: ${formatContextValue(riskFlags)}`,
+  ].join("\n");
+}
+
 export function signalPayloadForCandidate(candidate: FeedResultMarket): SignalAnalysisRequest {
   return {
-    market: {
-      question: candidate.question,
-      yesPrice: candidate.yesPrice,
-      noPrice: candidate.noPrice,
-      slug: candidate.slug,
-      link: candidate.polymarketUrl,
-      endDate: candidate.endDate,
-      spread: candidate.spread,
-      liquidity: candidate.liquidity,
-      volume24h: candidate.volume24h,
-      oneDayPriceChange: candidate.oneDayPriceChange,
-      sourceProfiles: (candidate as { sourceProfiles?: unknown }).sourceProfiles,
-    },
+    url: candidate.polymarketUrl,
+    previous_analysis_context: feedContextForCandidate(candidate),
   };
 }
 

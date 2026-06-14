@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSignalPayload,
   extractPlanCandidates,
+  feedContextForCandidate,
   firstSignalAnalysis,
   parseProbability,
   recommendedPlanAction,
@@ -113,26 +114,36 @@ describe("signal plan helpers", () => {
     expect(extractPlanCandidates([])).toEqual([]);
   });
 
-  it("builds structured market payloads for the signal-agent API", () => {
+  it("builds URL-first signal-agent payloads with feed context", () => {
     const payload = signalPayloadForCandidate(
       market({
         spread: 0.03,
         liquidity: 200_000,
         volume24h: 50_000,
+        lpExpectedReturnDailyPct: 1.25,
+        lpRiskFlags: ["wide_spread"],
       }) as FeedResultMarket & { sourceProfiles: string[] },
     );
 
-    expect(payload).toEqual({
-      market: expect.objectContaining({
-        question: "Will this happen?",
-        yesPrice: 0.5,
-        noPrice: 0.5,
-        slug: "test-market",
-        spread: 0.03,
-        liquidity: 200_000,
-        volume24h: 50_000,
-      }),
-    });
+    expect(payload).not.toHaveProperty("market");
+    expect(payload.url).toBe("https://polymarket.com/event/test-event/test-market");
+    expect(payload.previous_analysis_context).toContain("Feed screening context");
+    expect(payload.previous_analysis_context).toContain("Liquidity: 200000");
+    expect(payload.previous_analysis_context).toContain("Spread: 0.03");
+    expect(payload.previous_analysis_context).toContain("LP risk flags: wide_spread");
+  });
+
+  it("formats feed context as supplemental ranking context", () => {
+    const context = feedContextForCandidate(
+      market({
+        daysToEnd: null,
+        oneDayPriceChange: -0.04,
+      }) as FeedResultMarket & { sourceProfiles: string[] },
+    );
+
+    expect(context).toContain("not as a replacement for canonical market metadata");
+    expect(context).toContain("1d price change: -0.04");
+    expect(context).toContain("Days to end: unknown");
   });
 
   it("normalizes the first signal analysis from single or multi responses", () => {
