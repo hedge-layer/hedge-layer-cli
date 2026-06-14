@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildSignalPayload,
   extractPlanCandidates,
-  feedContextForCandidate,
   firstSignalAnalysis,
   parseProbability,
   recommendedPlanAction,
@@ -114,7 +113,7 @@ describe("signal plan helpers", () => {
     expect(extractPlanCandidates([])).toEqual([]);
   });
 
-  it("builds URL-first signal-agent payloads with feed context", () => {
+  it("builds URL-only signal-agent payloads from candidates", () => {
     const payload = signalPayloadForCandidate(
       market({
         spread: 0.03,
@@ -126,24 +125,8 @@ describe("signal plan helpers", () => {
     );
 
     expect(payload).not.toHaveProperty("market");
+    expect(payload).not.toHaveProperty("previous_analysis_context");
     expect(payload.url).toBe("https://polymarket.com/event/test-event/test-market");
-    expect(payload.previous_analysis_context).toContain("Feed screening context");
-    expect(payload.previous_analysis_context).toContain("Liquidity: 200000");
-    expect(payload.previous_analysis_context).toContain("Spread: 0.03");
-    expect(payload.previous_analysis_context).toContain("LP risk flags: wide_spread");
-  });
-
-  it("formats feed context as supplemental ranking context", () => {
-    const context = feedContextForCandidate(
-      market({
-        daysToEnd: null,
-        oneDayPriceChange: -0.04,
-      }) as FeedResultMarket & { sourceProfiles: string[] },
-    );
-
-    expect(context).toContain("not as a replacement for canonical market metadata");
-    expect(context).toContain("1d price change: -0.04");
-    expect(context).toContain("Days to end: unknown");
   });
 
   it("normalizes the first signal analysis from single or multi responses", () => {
