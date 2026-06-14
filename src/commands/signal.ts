@@ -1,14 +1,21 @@
 import { Command, InvalidArgumentError } from "commander";
-import { readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { dirname, join } from "node:path";
+import { promisify } from "node:util";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { ApiClient } from "../client.js";
 import { displaySignalAnalysis } from "../signal-display.js";
 import type {
+  FeedResultMarket,
   GlobalOptions,
+  SignalAnalysis,
   SignalAnalysisApiResponse,
   SignalAnalysisRequest,
   SignalMarketInput,
 } from "../types.js";
 import * as out from "../output.js";
+
+const execFileAsync = promisify(execFile);
 
 interface SignalAnalyzeOpts {
   url?: string[];
@@ -20,6 +27,47 @@ interface SignalAnalyzeOpts {
   noProb?: number;
   slug?: string;
   link?: string;
+}
+
+interface SignalPlanOpts {
+  candidates: string;
+  out?: string;
+  account?: string;
+  json?: boolean;
+  quiet?: boolean;
+}
+
+export type RecommendedPlanAction =
+  | "SKIP"
+  | "WATCH"
+  | "PASSIVE_BUY_YES"
+  | "PASSIVE_BUY_NO"
+  | "AGGRESSIVE_BUY_YES"
+  | "AGGRESSIVE_BUY_NO";
+
+export interface SignalPlanQuote {
+  decision?: string;
+  route?: string;
+  outcome?: "YES" | "NO" | string | null;
+  price?: number | null;
+  shares?: number;
+  safeShares?: number;
+  allocationAmount?: number;
+  allocationPct?: number;
+  slippageBps?: number | null;
+  reason?: string;
+  [key: string]: unknown;
+}
+
+export interface SignalPlanRow {
+  market_slug: string;
+  market_name: string;
+  market_link?: string;
+  candidate: FeedResultMarket;
+  signal: SignalAnalysis | null;
+  quote: SignalPlanQuote | null;
+  priority_score: number;
+  recommended_action: RecommendedPlanAction;
 }
 
 function requireAuth(client: ApiClient): void {
@@ -130,6 +178,119 @@ async function runSignalAnalysis(
   return client.post<SignalAnalysisApiResponse>("/api/signal/analyze", payload);
 }
 
+function num(value: unknown, fallback = 0): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function confidenceWeight(confidence: unknown): number {
+  const value = String(confidence ?? "");
+  if (value.startsWith("High")) return 1;
+  if (value.startsWith("Medium")) return 0.75;
+  return 0.5;
+}
+
+export function extractPlanCandidates(raw: unknown): FeedResultMarket[] {
+  if (Array.isArray(raw)) return raw as FeedResultMarket[];
+  if (!raw || typeof raw !== "object") return [];
+  const payload = raw as { candidates?: unknown; markets?: unknown };
+  if (Array.isArray(payload.candidates)) return payload.candidates as FeedResultMarket[];
+  if (Array.isArray(payload.markets)) return payload.markets as FeedResultMarket[];
+  return [];
+}
+
+export function signalPayloadForCandidate(candidate: FeedResultMarket): SignalAnalysisRequest {
+  return {
+    market: {
+      question: candidate.question,
+      yesPrice: candidate.yesPrice,
+      noPrice: candidate.noPrice,
+      slug: candidate.slug,
+      link: candidate.polymarketUrl,
+      endDate: candidate.endDate,
+      spread: candidate.spread,
+      liquidity: candidate.liquidity,
+      volume24h: candidate.volume24h,
+      oneDayPriceChange: candidate.oneDayPriceChange,
+      sourceProfiles: (candidate as { sourceProfiles?: unknown }).sourceProfiles,
+    },
+  };
+}
+
+export function firstSignalAnalysis(response: SignalAnalysisApiResponse): SignalAnalysis | null {
+  const result = response.result;
+  if (!result) return null;
+  if (result.analysis) return result.analysis;
+  const first = result.analyses?.find((item) => item.analysis);
+  return first?.analysis ?? null;
+}
+
+export function recommendedPlanAction(signal: SignalAnalysis | null, quote: SignalPlanQuote | null): RecommendedPlanAction {
+  if (!signal || !quote || quote.decision === "SKIP" || quote.route === "skip" || !quote.outcome) {
+    return "SKIP";
+  }
+  if (signal.signal_strength !== "strong") return "WATCH";
+  if (quote.route === "aggressive") {
+    return quote.outcome === "YES" ? "AGGRESSIVE_BUY_YES" : "AGGRESSIVE_BUY_NO";
+  }
+  if (quote.route === "passive") {
+    return quote.outcome === "YES" ? "PASSIVE_BUY_YES" : "PASSIVE_BUY_NO";
+  }
+  return "WATCH";
+}
+
+export function signalPlanPriority(candidate: FeedResultMarket, signal: SignalAnalysis | null, quote: SignalPlanQuote | null): number {
+  const gap = signal?.probability_gap;
+  if (gap === null || gap === undefined) return 0;
+  const executionPenalty =
+    !quote || quote.decision === "SKIP" || quote.route === "skip"
+      ? 0.1
+      : quote.route === "passive"
+        ? 0.01
+        : 0;
+  const movementPenalty = Math.abs(num(candidate.oneDayPriceChange)) * 0.5;
+  const score = Math.abs(gap) * confidenceWeight(signal.confidence) - executionPenalty - movementPenalty;
+  return Math.round(Math.max(0, score) * 10_000) / 10_000;
+}
+
+async function runTraderQuote(candidate: FeedResultMarket, estimatedYes: number, account?: string): Promise<SignalPlanQuote> {
+  const args = ["quote", candidate.slug, "--estimated", String(estimatedYes), "--json"];
+  if (account) args.push("--account", account);
+  const { stdout } = await execFileAsync("hl-trader", args, {
+    timeout: 120_000,
+    maxBuffer: 1024 * 1024 * 4,
+  });
+  return JSON.parse(stdout) as SignalPlanQuote;
+}
+
+async function writeSignalPlanArtifacts(
+  outPath: string,
+  candidates: FeedResultMarket[],
+  rows: SignalPlanRow[],
+  candidatesPath: string,
+): Promise<Record<string, string>> {
+  const dir = dirname(outPath);
+  const artifacts = {
+    candidates: join(dir, "candidates.json"),
+    signals: join(dir, "signals.json"),
+    quotes: join(dir, "quotes.json"),
+    plan: outPath,
+  };
+  await mkdir(dir, { recursive: true });
+  const plan = {
+    generated_at: new Date().toISOString(),
+    mode: "dry_run",
+    candidates_path: candidatesPath,
+    artifacts,
+    rows,
+  };
+  await writeFile(artifacts.candidates, JSON.stringify({ candidates }, null, 2) + "\n", "utf8");
+  await writeFile(artifacts.signals, JSON.stringify(rows.map((row) => ({ candidate: row.candidate, signal: row.signal })), null, 2) + "\n", "utf8");
+  await writeFile(artifacts.quotes, JSON.stringify(rows.map((row) => ({ candidate: row.candidate, quote: row.quote })), null, 2) + "\n", "utf8");
+  await writeFile(artifacts.plan, JSON.stringify(plan, null, 2) + "\n", "utf8");
+  return artifacts;
+}
+
 export function registerSignalCommands(program: Command): void {
   const signal = program
     .command("signal")
@@ -167,5 +328,81 @@ export function registerSignalCommands(program: Command): void {
 
       const result = await runSignalAnalysis(client, payload);
       displaySignalAnalysis(result, globalOpts);
+    });
+
+  signal
+    .command("plan")
+    .description("Build a dry-run signal and executable-quote plan from feed ensemble candidates")
+    .requiredOption("--candidates <file>", "Candidate JSON from `hl feed ensemble`")
+    .option("--out <file>", "Output plan JSON path", "plan.json")
+    .option("--account <name>", "Named hl-trader account to use for quotes")
+    .option("--json", "Print machine-readable plan")
+    .option("--quiet", "Only print the output path")
+    .action(async (o: SignalPlanOpts) => {
+      const globalOpts = program.opts<GlobalOptions>();
+      const client = new ApiClient(globalOpts);
+      requireAuth(client);
+
+      try {
+        const raw = JSON.parse(await readFile(o.candidates, "utf8")) as unknown;
+        const candidates = extractPlanCandidates(raw);
+        if (candidates.length === 0) {
+          throw new Error("Candidates JSON must contain a candidates or markets array.");
+        }
+
+        const rows: SignalPlanRow[] = [];
+        for (const candidate of candidates) {
+          if (!o.quiet && !globalOpts.json) {
+            process.stderr.write(out.dim(`  Analyzing ${candidate.slug}...\n`));
+          }
+          const signal = firstSignalAnalysis(await runSignalAnalysis(client, signalPayloadForCandidate(candidate)));
+          const predicted = signal?.predicted_prob;
+          let quote: SignalPlanQuote | null = null;
+          if (predicted !== null && predicted !== undefined) {
+            quote = await runTraderQuote(candidate, predicted / 100, o.account);
+          }
+          rows.push({
+            market_slug: candidate.slug,
+            market_name: candidate.question,
+            market_link: candidate.polymarketUrl,
+            candidate,
+            signal,
+            quote,
+            priority_score: signalPlanPriority(candidate, signal, quote),
+            recommended_action: recommendedPlanAction(signal, quote),
+          });
+        }
+
+        rows.sort((a, b) => b.priority_score - a.priority_score);
+        const artifacts = await writeSignalPlanArtifacts(o.out ?? "plan.json", candidates, rows, o.candidates);
+        const plan = JSON.parse(await readFile(artifacts.plan, "utf8")) as unknown;
+
+        if (o.json || globalOpts.json) {
+          out.json(plan);
+          return;
+        }
+        if (o.quiet) {
+          process.stdout.write(`${artifacts.plan}\n`);
+          return;
+        }
+        out.heading(`Signal Plan — ${rows.length} candidates`);
+        out.table(
+          rows.slice(0, 15).map((row) => [
+            row.priority_score.toFixed(4),
+            row.recommended_action,
+            out.truncate(row.market_name, 48),
+            row.signal?.probability_gap === null || row.signal?.probability_gap === undefined
+              ? "n/a"
+              : `${(row.signal.probability_gap * 100).toFixed(2)}%`,
+            String(row.signal?.confidence ?? "n/a"),
+            String(row.quote?.decision ?? "n/a"),
+          ]),
+          ["Score", "Action", "Market", "Gap", "Conf", "Quote"],
+        );
+        out.success(`Wrote ${artifacts.plan}`);
+      } catch (e) {
+        out.error(e instanceof Error ? e.message : String(e));
+        process.exit(1);
+      }
     });
 }
