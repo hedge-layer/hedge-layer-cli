@@ -1,7 +1,5 @@
 import { Command, InvalidArgumentError } from "commander";
-import { execFile } from "node:child_process";
 import { dirname, join } from "node:path";
-import { promisify } from "node:util";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { ApiClient } from "../client.js";
 import { displaySignalAnalysis } from "../signal-display.js";
@@ -14,8 +12,6 @@ import type {
   SignalMarketInput,
 } from "../types.js";
 import * as out from "../output.js";
-
-const execFileAsync = promisify(execFile);
 
 interface SignalAnalyzeOpts {
   url?: string[];
@@ -32,7 +28,6 @@ interface SignalAnalyzeOpts {
 interface SignalPlanOpts {
   candidates: string;
   out?: string;
-  account?: string;
   json?: boolean;
   quiet?: boolean;
 }
@@ -40,24 +35,8 @@ interface SignalPlanOpts {
 export type RecommendedPlanAction =
   | "SKIP"
   | "WATCH"
-  | "PASSIVE_BUY_YES"
-  | "PASSIVE_BUY_NO"
-  | "AGGRESSIVE_BUY_YES"
-  | "AGGRESSIVE_BUY_NO";
-
-export interface SignalPlanQuote {
-  decision?: string;
-  route?: string;
-  outcome?: "YES" | "NO" | string | null;
-  price?: number | null;
-  shares?: number;
-  safeShares?: number;
-  allocationAmount?: number;
-  allocationPct?: number;
-  slippageBps?: number | null;
-  reason?: string;
-  [key: string]: unknown;
-}
+  | "REVIEW_BUY_YES"
+  | "REVIEW_BUY_NO";
 
 export interface SignalPlanRow {
   market_slug: string;
@@ -65,7 +44,6 @@ export interface SignalPlanRow {
   market_link?: string;
   candidate: FeedResultMarket;
   signal: SignalAnalysis | null;
-  quote: SignalPlanQuote | null;
   priority_score: number;
   recommended_action: RecommendedPlanAction;
 }
@@ -213,42 +191,20 @@ export function firstSignalAnalysis(response: SignalAnalysisApiResponse): Signal
   return first?.analysis ?? null;
 }
 
-export function recommendedPlanAction(signal: SignalAnalysis | null, quote: SignalPlanQuote | null): RecommendedPlanAction {
-  if (!signal || !quote || quote.decision === "SKIP" || quote.route === "skip" || !quote.outcome) {
-    return "SKIP";
-  }
+export function recommendedPlanAction(signal: SignalAnalysis | null): RecommendedPlanAction {
+  if (!signal) return "SKIP";
   if (signal.signal_strength !== "strong") return "WATCH";
-  if (quote.route === "aggressive") {
-    return quote.outcome === "YES" ? "AGGRESSIVE_BUY_YES" : "AGGRESSIVE_BUY_NO";
-  }
-  if (quote.route === "passive") {
-    return quote.outcome === "YES" ? "PASSIVE_BUY_YES" : "PASSIVE_BUY_NO";
-  }
-  return "WATCH";
+  const gap = signal.probability_gap;
+  if (gap === null || gap === undefined || gap === 0) return "WATCH";
+  return gap > 0 ? "REVIEW_BUY_YES" : "REVIEW_BUY_NO";
 }
 
-export function signalPlanPriority(candidate: FeedResultMarket, signal: SignalAnalysis | null, quote: SignalPlanQuote | null): number {
+export function signalPlanPriority(candidate: FeedResultMarket, signal: SignalAnalysis | null): number {
   const gap = signal?.probability_gap;
   if (gap === null || gap === undefined) return 0;
-  const executionPenalty =
-    !quote || quote.decision === "SKIP" || quote.route === "skip"
-      ? 0.1
-      : quote.route === "passive"
-        ? 0.01
-        : 0;
   const movementPenalty = Math.abs(num(candidate.oneDayPriceChange)) * 0.5;
-  const score = Math.abs(gap) * confidenceWeight(signal.confidence) - executionPenalty - movementPenalty;
+  const score = Math.abs(gap) * confidenceWeight(signal.confidence) - movementPenalty;
   return Math.round(Math.max(0, score) * 10_000) / 10_000;
-}
-
-async function runTraderQuote(candidate: FeedResultMarket, estimatedYes: number, account?: string): Promise<SignalPlanQuote> {
-  const args = ["quote", candidate.slug, "--estimated", String(estimatedYes), "--json"];
-  if (account) args.push("--account", account);
-  const { stdout } = await execFileAsync("hl-trader", args, {
-    timeout: 120_000,
-    maxBuffer: 1024 * 1024 * 4,
-  });
-  return JSON.parse(stdout) as SignalPlanQuote;
 }
 
 async function writeSignalPlanArtifacts(
@@ -261,7 +217,6 @@ async function writeSignalPlanArtifacts(
   const artifacts = {
     candidates: join(dir, "candidates.json"),
     signals: join(dir, "signals.json"),
-    quotes: join(dir, "quotes.json"),
     plan: outPath,
   };
   await mkdir(dir, { recursive: true });
@@ -274,7 +229,6 @@ async function writeSignalPlanArtifacts(
   };
   await writeFile(artifacts.candidates, JSON.stringify({ candidates }, null, 2) + "\n", "utf8");
   await writeFile(artifacts.signals, JSON.stringify(rows.map((row) => ({ candidate: row.candidate, signal: row.signal })), null, 2) + "\n", "utf8");
-  await writeFile(artifacts.quotes, JSON.stringify(rows.map((row) => ({ candidate: row.candidate, quote: row.quote })), null, 2) + "\n", "utf8");
   await writeFile(artifacts.plan, JSON.stringify(plan, null, 2) + "\n", "utf8");
   return artifacts;
 }
@@ -320,10 +274,9 @@ export function registerSignalCommands(program: Command): void {
 
   signal
     .command("plan")
-    .description("Build a dry-run signal and executable-quote plan from feed ensemble candidates")
+    .description("Build a dry-run signal-ranked plan from feed ensemble candidates")
     .requiredOption("--candidates <file>", "Candidate JSON from `hl feed ensemble`")
     .option("--out <file>", "Output plan JSON path", "plan.json")
-    .option("--account <name>", "Named hl-trader account to use for quotes")
     .option("--json", "Print machine-readable plan")
     .option("--quiet", "Only print the output path")
     .action(async (o: SignalPlanOpts) => {
@@ -344,20 +297,14 @@ export function registerSignalCommands(program: Command): void {
             process.stderr.write(out.dim(`  Analyzing ${candidate.slug}...\n`));
           }
           const signal = firstSignalAnalysis(await runSignalAnalysis(client, signalPayloadForCandidate(candidate)));
-          const predicted = signal?.predicted_prob;
-          let quote: SignalPlanQuote | null = null;
-          if (predicted !== null && predicted !== undefined) {
-            quote = await runTraderQuote(candidate, predicted / 100, o.account);
-          }
           rows.push({
             market_slug: candidate.slug,
             market_name: candidate.question,
             market_link: candidate.polymarketUrl,
             candidate,
             signal,
-            quote,
-            priority_score: signalPlanPriority(candidate, signal, quote),
-            recommended_action: recommendedPlanAction(signal, quote),
+            priority_score: signalPlanPriority(candidate, signal),
+            recommended_action: recommendedPlanAction(signal),
           });
         }
 
@@ -383,9 +330,8 @@ export function registerSignalCommands(program: Command): void {
               ? "n/a"
               : `${(row.signal.probability_gap * 100).toFixed(2)}%`,
             String(row.signal?.confidence ?? "n/a"),
-            String(row.quote?.decision ?? "n/a"),
           ]),
-          ["Score", "Action", "Market", "Gap", "Conf", "Quote"],
+          ["Score", "Action", "Market", "Gap", "Conf"],
         );
         out.success(`Wrote ${artifacts.plan}`);
       } catch (e) {

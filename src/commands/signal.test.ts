@@ -141,22 +141,22 @@ describe("signal plan helpers", () => {
     expect(firstSignalAnalysis(multi)?.market_slug).toBe("b");
   });
 
-  it("maps signal and quote into recommended actions", () => {
+  it("maps signal gaps into research review actions", () => {
     const signal = { signal_strength: "strong" as const, probability_gap: 0.1, confidence: "High" };
-    expect(recommendedPlanAction(signal, { decision: "EXECUTABLE", route: "aggressive", outcome: "YES" })).toBe("AGGRESSIVE_BUY_YES");
-    expect(recommendedPlanAction(signal, { decision: "PASSIVE_ONLY", route: "passive", outcome: "NO" })).toBe("PASSIVE_BUY_NO");
-    expect(recommendedPlanAction({ ...signal, signal_strength: "weak" }, { decision: "EXECUTABLE", route: "aggressive", outcome: "YES" })).toBe("WATCH");
-    expect(recommendedPlanAction(signal, { decision: "SKIP", route: "skip", outcome: "YES" })).toBe("SKIP");
+    expect(recommendedPlanAction(signal)).toBe("REVIEW_BUY_YES");
+    expect(recommendedPlanAction({ ...signal, probability_gap: -0.1 })).toBe("REVIEW_BUY_NO");
+    expect(recommendedPlanAction({ ...signal, probability_gap: 0 })).toBe("WATCH");
+    expect(recommendedPlanAction({ ...signal, signal_strength: "weak" })).toBe("WATCH");
+    expect(recommendedPlanAction(null)).toBe("SKIP");
   });
 
-  it("scores strong executable plans above passive or low-confidence plans", () => {
+  it("scores high-confidence plans above low-confidence or high-movement plans", () => {
     const candidate = market({ oneDayPriceChange: 0 });
+    const moving = market({ oneDayPriceChange: 0.1 });
     const high = { signal_strength: "strong" as const, probability_gap: 0.1, confidence: "High" };
     const low = { signal_strength: "strong" as const, probability_gap: 0.1, confidence: "Low" };
-    const aggressive = { decision: "EXECUTABLE", route: "aggressive", outcome: "YES" };
-    const passive = { decision: "PASSIVE_ONLY", route: "passive", outcome: "YES" };
 
-    expect(signalPlanPriority(candidate, high, aggressive)).toBeGreaterThan(signalPlanPriority(candidate, high, passive));
-    expect(signalPlanPriority(candidate, high, aggressive)).toBeGreaterThan(signalPlanPriority(candidate, low, aggressive));
+    expect(signalPlanPriority(candidate, high)).toBeGreaterThan(signalPlanPriority(candidate, low));
+    expect(signalPlanPriority(candidate, high)).toBeGreaterThan(signalPlanPriority(moving, high));
   });
 });
