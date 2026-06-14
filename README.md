@@ -59,7 +59,8 @@ hl research
 # 5. Run the manual liquidity-provider flow
 hl --json feed liquidity-provider --limit 15 | jq '{ markets: .markets }' > markets.json
 hl lp allocator --markets markets.json
-hl-trader buy
+hl --json lp allocator --markets markets.json > allocator.json
+hl-trader allocate --plan allocator.json
 
 # 6. Check linked wallet funds
 hl wallet balances
@@ -86,9 +87,11 @@ The lightweight manual loop is:
 
 ```bash
 hl --json feed lp-opportunity --limit 15 > markets.json
+hl feed ensemble --limit 25 --output candidates.json
 hl-trader pnl --json > pnl.json   # optional: wallet PnL + live inventory
 hl lp allocator --markets markets.json --pnl pnl.json --allocations pnl.json
-hl-trader buy ...
+hl --json lp allocator --markets markets.json --pnl pnl.json --allocations pnl.json > allocator.json
+hl-trader allocate --plan allocator.json
 ```
 
 `hl lp allocator` submits the candidate market list through the web API to the
