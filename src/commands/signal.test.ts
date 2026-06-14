@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSignalPayload, parseProbability } from "./signal.js";
+import {
+  buildSignalPayload,
+  parseProbability,
+} from "./signal.js";
 
 describe("signal analyze payload", () => {
   it("builds a single-url signal payload", async () => {

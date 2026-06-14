@@ -6,8 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-06-14
+
 ### Added
 
+- Add `hl feed ensemble` to run multiple existing feed profiles and sorts, de-dupe markets by slug, preserve source profile provenance, re-rank candidates with a deterministic ensemble score, and write local candidate JSON.
 - `hl lp allocator --pnl <file>` submits per-market PnL context (a JSON array or `{ "pnl_context": [...] }`, e.g. `hl-trader pnl --json` output) so the allocator's PnL caution overlay can downgrade borderline allocations on markets with negative or locked-loss PnL.
 - `hl lp allocator --allocations <file>` now also accepts an `{ "allocations": [...] }` wrapper, so one `hl-trader pnl --json` file can serve both `--pnl` and `--allocations`.
 
