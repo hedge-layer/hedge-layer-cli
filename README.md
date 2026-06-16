@@ -85,11 +85,14 @@ hl lp evaluate                         # summarize PnL lessons
 The lightweight manual loop is:
 
 ```bash
-hl --json feed lp-opportunity --limit 15 > markets.json
+hl feed ensemble --limit 25 --output candidates.json
+# or: hl --json feed lp-opportunity --limit 15 > markets.json
 hl-trader pnl --json > pnl.json   # optional: wallet PnL + live inventory
-hl lp allocator --markets markets.json --pnl pnl.json --allocations pnl.json
+hl lp allocator --markets candidates.json --pnl pnl.json --allocations pnl.json
 hl-trader buy ...
 ```
+
+`hl feed ensemble` runs several feed lenses (liquid core, active volume, movers, new markets, uncertainty, and LP quality), de-duplicates by slug, and writes a daily candidate file.
 
 `hl lp allocator` submits the candidate market list through the web API to the
 allocator agent. Allocator output shows target capital, quote regime, failed
