@@ -117,16 +117,55 @@ function feedQueryParams(opts: {
 }
 
 const ENSEMBLE_SOURCES: Array<{ name: string; params: Record<string, string> }> = [
-  { name: "liquid-new-or-long", params: { profile: "liquid-new-or-long", sortBy: "liquidity" } },
-  { name: "liquidity-provider", params: { profile: "liquidity-provider", sortBy: "lpExpectedReturn" } },
-  { name: "lp-opportunity", params: { profile: "lp-opportunity", sortBy: "rewardYield" } },
-  { name: "movement", params: { sortBy: "movement", preset: "price-movers" } },
-  { name: "spread", params: { sortBy: "spread", preset: "liquidity-provider" } },
-  { name: "reward-yield", params: { sortBy: "rewardYield", preset: "rewards-optimizer", minRewardsDailyRate: "0.01" } },
+  { name: "liquid-core", params: { sortBy: "liquidity", preset: "liquidity-focused" } },
+  { name: "active-volume", params: { sortBy: "volume", preset: "volume-hunter" } },
+  { name: "movers", params: { sortBy: "movement", preset: "price-movers" } },
+  { name: "new-markets", params: { sortBy: "recency", preset: "new-markets" } },
+  { name: "uncertainty", params: { sortBy: "extremity" } },
+  { name: "lp-quality", params: { profile: "liquidity-provider", sortBy: "lpExpectedReturn" } },
 ];
+
+const EXTREME_PROBABILITY_LOW = 0.07;
+const EXTREME_PROBABILITY_HIGH = 0.93;
+const EXTREME_PROBABILITY_MAX_PENALTY = 15;
+const HORIZON_PEAK_DAYS = 365;
+const HORIZON_LONG_TERM_DECAY_PER_YEAR = 4;
+const HORIZON_LONG_TERM_FLOOR = 2;
+const ENSEMBLE_SOURCE_SCORE_PER_SOURCE = 2;
+const ENSEMBLE_SOURCE_SCORE_MAX = 8;
+const ENSEMBLE_MAX_CANDIDATES_PER_EVENT = 2;
+const ENSEMBLE_MAX_SINGLE_SOURCE_CANDIDATES = 5;
 
 function num(value: number | null | undefined): number {
   return Number.isFinite(value) ? Number(value) : 0;
+}
+
+function extremeProbabilityPenalty(candidate: FeedResultMarket): number {
+  const probability = Number.isFinite(candidate.probability) ? Number(candidate.probability) : candidate.yesPrice;
+  const boundedProbability = Math.max(0, Math.min(1, probability));
+
+  if (boundedProbability < EXTREME_PROBABILITY_LOW) {
+    return ((EXTREME_PROBABILITY_LOW - boundedProbability) / EXTREME_PROBABILITY_LOW) *
+      EXTREME_PROBABILITY_MAX_PENALTY;
+  }
+
+  if (boundedProbability > EXTREME_PROBABILITY_HIGH) {
+    return ((boundedProbability - EXTREME_PROBABILITY_HIGH) / (1 - EXTREME_PROBABILITY_HIGH)) *
+      EXTREME_PROBABILITY_MAX_PENALTY;
+  }
+
+  return 0;
+}
+
+function horizonScore(days: number | null): number {
+  if (days === null) return 2;
+  if (days < 3) return 0;
+  if (days <= HORIZON_PEAK_DAYS) {
+    return Math.log1p(days) / Math.log1p(HORIZON_PEAK_DAYS) * 10;
+  }
+
+  const yearsPastPeak = (days - HORIZON_PEAK_DAYS) / HORIZON_PEAK_DAYS;
+  return Math.max(HORIZON_LONG_TERM_FLOOR, 10 - yearsPastPeak * HORIZON_LONG_TERM_DECAY_PER_YEAR);
 }
 
 function scoreCandidate(candidate: FeedResultMarket, sourceCount: number): number {
@@ -134,18 +173,51 @@ function scoreCandidate(candidate: FeedResultMarket, sourceCount: number): numbe
   const volumeScore = Math.min(25, Math.log1p(Math.max(0, candidate.volume24h)) / Math.log1p(1_000_000) * 25);
   const spreadScore = Math.max(0, Math.min(15, (0.12 - Math.max(0, candidate.spread)) / 0.12 * 15));
   const movementPenalty = Math.min(20, Math.abs(candidate.oneDayPriceChange) * 100);
+  const probabilityPenalty = extremeProbabilityPenalty(candidate);
   const days = candidate.daysToEnd ?? null;
-  const horizonScore = days === null
-    ? 2
-    : days < 3
-      ? 0
-      : Math.min(10, Math.log1p(days) / Math.log1p(365) * 10);
+  const horizon = horizonScore(days);
   const rewardScore = Math.max(
     0,
     Math.min(20, num(candidate.components?.rewardYield) * 0.1 + Math.max(0, num(candidate.lpExpectedReturnDailyPct)) * 50),
   );
-  const sourceScore = Math.min(16, sourceCount * 4);
-  return Math.round((liquidityScore + volumeScore + spreadScore + horizonScore + rewardScore + sourceScore - movementPenalty) * 10) / 10;
+  const sourceScore = Math.min(ENSEMBLE_SOURCE_SCORE_MAX, sourceCount * ENSEMBLE_SOURCE_SCORE_PER_SOURCE);
+  return Math.round(
+    (
+      liquidityScore +
+      volumeScore +
+      spreadScore +
+      horizon +
+      rewardScore +
+      sourceScore -
+      movementPenalty -
+      probabilityPenalty
+    ) * 10,
+  ) / 10;
+}
+
+function diversifyCandidates(candidates: EnsembleCandidate[], limit: number): EnsembleCandidate[] {
+  const eventCounts = new Map<string, number>();
+  const singleSourceCounts = new Map<string, number>();
+  const diversified: EnsembleCandidate[] = [];
+
+  for (const candidate of candidates) {
+    const eventKey = candidate.eventSlug || candidate.slug;
+    const eventCount = eventCounts.get(eventKey) ?? 0;
+    if (eventCount >= ENSEMBLE_MAX_CANDIDATES_PER_EVENT) continue;
+
+    const singleSource = candidate.sourceProfiles.length === 1 ? candidate.sourceProfiles[0] : null;
+    if (singleSource !== null) {
+      const sourceCount = singleSourceCounts.get(singleSource) ?? 0;
+      if (sourceCount >= ENSEMBLE_MAX_SINGLE_SOURCE_CANDIDATES) continue;
+      singleSourceCounts.set(singleSource, sourceCount + 1);
+    }
+
+    eventCounts.set(eventKey, eventCount + 1);
+    diversified.push(candidate);
+    if (diversified.length >= limit) break;
+  }
+
+  return diversified;
 }
 
 export function buildFeedEnsemble(
@@ -191,8 +263,8 @@ export function buildFeedEnsemble(
       sourceProfiles: [...new Set(candidate.sourceProfiles)],
       ensembleScore: scoreCandidate(candidate, new Set(candidate.sourceProfiles).size),
     }))
-    .sort((a, b) => b.ensembleScore - a.ensembleScore || b.score - a.score)
-    .slice(0, limit);
+    .sort((a, b) => b.ensembleScore - a.ensembleScore || b.score - a.score);
+  const diversifiedCandidates = diversifyCandidates(candidates, limit);
 
   return {
     generatedAt,
@@ -200,8 +272,8 @@ export function buildFeedEnsemble(
     totalSources: sourceResults.length,
     totalRawMarkets,
     totalCandidates: bySlug.size,
-    marketsReturned: candidates.length,
-    candidates,
+    marketsReturned: diversifiedCandidates.length,
+    candidates: diversifiedCandidates,
   };
 }
 
