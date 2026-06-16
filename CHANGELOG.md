@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-06-16
+
+### Changed
+
+- Broaden `hl feed ensemble` for daily discovery by replacing overlapping LP/reward/spread-heavy source screens with liquid-core, active-volume, movers, new-markets, uncertainty, and LP-quality lenses.
+- Reduce the ensemble duplicate-source bonus, cap repeated event families, and limit single-source picks from any one lens so the daily candidate list covers a wider market radius.
+- Penalize ensemble candidates with extreme YES probabilities below 7% or above 93%.
+- Make horizon scoring peak at one year and decay for longer-dated markets, instead of rewarding very long horizons indefinitely.
+
 ## [2.1.0] - 2026-06-14
 
 ### Added
@@ -191,6 +200,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Global options: `--json`, `--api-url`, `--token`, `--verbose`, `--no-color`
 - Token storage in `~/.hedgelayer/config.json`
 
+[2.2.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v2.2.0
+[2.1.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v2.1.0
+[2.0.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v2.0.0
 [1.8.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.8.0
 [1.7.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.7.0
 [1.6.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v1.6.0
