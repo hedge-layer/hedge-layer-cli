@@ -33,6 +33,7 @@ Run the CLI after build: `node dist/index.mjs [options] [command]`
 | `hl research show <id>` | Display session details |
 | `hl research delete <id>` | Delete session |
 | `hl feed [lp-opportunity|liquid-new-or-long]` | Polymarket feed (`GET /api/feed`); optional screening shorthand, or flags only |
+| `hl feed ensemble` | Run multiple feed lenses, de-dupe by slug, and write daily candidates JSON for allocator handoff |
 | `hl auth login` | Interactive token setup |
 | `hl auth status` | Check authentication |
 | `hl auth logout` | Remove stored token |
