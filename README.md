@@ -58,8 +58,8 @@ hl research
 
 # 5. Run the manual liquidity-provider flow
 hl --json feed liquidity-provider --limit 15 | jq '{ markets: .markets }' > markets.json
-hl lp allocator --markets markets.json
-hl-trader buy
+hl --json lp allocator --markets markets.json > plan.json
+hl-trader allocate --plan plan.json
 
 # 6. Check linked wallet funds
 hl wallet balances
@@ -86,10 +86,10 @@ The lightweight manual loop is:
 
 ```bash
 hl feed ensemble --limit 25 --output candidates.json
-# or: hl --json feed lp-opportunity --limit 15 > markets.json
+# or: hl --json feed lp-opportunity --limit 15 | jq '{ markets: .markets }' > candidates.json
 hl-trader pnl --json > pnl.json   # optional: wallet PnL + live inventory
-hl lp allocator --markets candidates.json --pnl pnl.json --allocations pnl.json
-hl-trader buy ...
+hl --json lp allocator --markets candidates.json --pnl pnl.json --allocations pnl.json > plan.json
+hl-trader allocate --plan plan.json
 ```
 
 `hl feed ensemble` runs several feed lenses (liquid core, active volume, movers, new markets, uncertainty, and LP quality), de-duplicates by slug, and writes a daily candidate file.
