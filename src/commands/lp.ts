@@ -204,7 +204,7 @@ export function registerLpCommands(program: Command): void {
     .description("Run the allocator agent on an explicit market list")
     .requiredOption("--markets <file>", "Candidate market JSON array or { markets }; use '-' to read stdin")
     .option("--allocations <file>", "Existing allocations JSON array or { allocations }; use '-' to read stdin")
-    .option("--pnl <file>", "Per-market PnL context JSON array or { pnl_context } (hl-trader pnl --json output); use '-' to read stdin")
+    .option("--pnl <file>", "Per-market PnL context JSON array or { pnl_context } (external wallet/inventory export); use '-' to read stdin")
     .option("--total-holdings <usd>", "Total holdings / portfolio value used for percentage sizing", parsePositiveNumber)
     .option("--capital-limit-pct <pct>", "Portfolio-level allocation cap as a percent of total holdings", parsePositiveNumber)
     .option("--per-market-limit-pct <pct>", "Per-market target cap as a percent of total holdings", parsePositiveNumber)
