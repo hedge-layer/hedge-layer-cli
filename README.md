@@ -59,7 +59,7 @@ hl research
 # 5. Run the manual liquidity-provider flow
 hl --json feed liquidity-provider --limit 15 | jq '{ markets: .markets }' > markets.json
 hl lp allocator --markets markets.json
-hl-trader buy
+your execution workflow
 
 # 6. Check linked wallet funds
 hl wallet balances
@@ -87,9 +87,9 @@ The lightweight manual loop is:
 ```bash
 hl feed ensemble --limit 25 --output candidates.json
 # or: hl --json feed lp-opportunity --limit 15 > markets.json
-hl-trader pnl --json > pnl.json   # optional: wallet PnL + live inventory
+external-pnl-export --json > pnl.json   # optional: wallet PnL + live inventory
 hl lp allocator --markets candidates.json --pnl pnl.json --allocations pnl.json
-hl-trader buy ...
+your execution workflow ...
 ```
 
 `hl feed ensemble` runs several feed lenses (liquid core, active volume, movers, new markets, uncertainty, and LP quality), de-duplicates by slug, and writes a daily candidate file.
@@ -102,7 +102,7 @@ the `hl` allocator command.
 `--allocations` tells the allocator what you already hold (enabling HOLD,
 REDUCE, and EXIT decisions), and `--pnl` feeds per-market PnL into its caution
 overlay so borderline allocations on losing markets are downgraded to WATCH or
-HOLD. Both flags accept the `hl-trader pnl --json` output file directly.
+HOLD. Both flags accept the same external wallet/inventory export shape.
 
 Wallet commands are available under `hl wallet`:
 

@@ -57,7 +57,7 @@ describe("allocator allocations input", () => {
     expect(parseAllocationsInput(rows)).toEqual(rows);
   });
 
-  it("accepts an { allocations } wrapper, e.g. hl-trader pnl --json output", () => {
+  it("accepts an { allocations } wrapper, e.g. external wallet/inventory export", () => {
     const rows = [{ market_slug: "m1", inventory_yes: 20, inventory_no: 5 }];
     expect(parseAllocationsInput({ wallet: "0xabc", allocations: rows })).toEqual(rows);
   });
@@ -75,7 +75,7 @@ describe("allocator pnl context input", () => {
     expect(parsePnlContextInput(rows)).toEqual(rows);
   });
 
-  it("accepts a { pnl_context } wrapper, e.g. hl-trader pnl --json output", () => {
+  it("accepts a { pnl_context } wrapper, e.g. external wallet/inventory export", () => {
     const rows = [
       { market_slug: "m1", realized_pnl: -2.5, capital_locked: 12, outcome: "loss" },
     ];
