@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-07-13
+
+### Added
+
+- Add `hl quote` for Polymarket directional BUY/SELL cost, liquidity, slippage,
+  fee, payout-risk, Signal-edge, and optional non-binding sizing previews.
+- Support explicit cash-sized BUY or share-sized BUY/SELL requests, automatic,
+  aggressive, and passive routing previews, optional Signal linkage, and
+  explicit saved-preview requests.
+
+### Changed
+
+- Reposition the official CLI around discovery, Signal analysis, and
+  non-executing quote previews.
+- Keep `hl lp allocator` as the sole LP command and preserve its dry-run-only
+  API contract.
+
+### Removed
+
+- Remove `hl wallet` and all deposit, balance, and withdrawal behavior.
+- Remove the stateful `hl lp scan`, `hl lp recommend`, and `hl lp evaluate`
+  commands and their legacy API response types.
+
 ## [2.2.0] - 2026-06-16
 
 ### Changed
@@ -200,6 +223,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Global options: `--json`, `--api-url`, `--token`, `--verbose`, `--no-color`
 - Token storage in `~/.hedgelayer/config.json`
 
+[3.0.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v3.0.0
 [2.2.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v2.2.0
 [2.1.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v2.1.0
 [2.0.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v2.0.0
