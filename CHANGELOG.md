@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [3.0.0] - 2026-07-13
 
+### Breaking Changes
+
+- Make the CLI preview-only: it can discover markets, analyze Signals, and
+  estimate quote economics, but it cannot sign, submit, cancel, or withdraw.
+- Remove `hl wallet` and the stateful `hl lp scan`, `hl lp recommend`, and
+  `hl lp evaluate` command families without compatibility shims.
+
 ### Added
 
 - Add `hl quote` for Polymarket directional BUY/SELL cost, liquidity, slippage,
@@ -22,6 +29,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   non-executing quote previews.
 - Keep `hl lp allocator` as the sole LP command and preserve its dry-run-only
   API contract.
+- Preserve auth, profile, Market Brief, research, Feed, Signal, and recent
+  Signal workflows, including their JSON and streaming response contracts.
+- Preserve `~/.hedgelayer/config.json`; logout continues to remove only that
+  file.
 
 ### Removed
 
