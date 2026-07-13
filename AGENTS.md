@@ -4,7 +4,7 @@
 
 This is a TypeScript CLI tool (`@hedge-layer/cli`) that acts as a thin client to the Hedge Layer API at `https://hedgelayer.ai`. There is no backend in this repo.
 
-Hedge Layer is a prediction market intelligence platform. The CLI provides terminal access to AI-powered market research sessions and Market Briefs.
+Hedge Layer is a prediction market intelligence platform. The v3 CLI provides terminal access to discovery, Signal analysis, non-executing directional quote previews, Market Briefs, and advanced dry-run LP planning.
 
 ### Key commands
 

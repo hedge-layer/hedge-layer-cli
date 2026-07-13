@@ -62,103 +62,6 @@ export interface UserProfile {
 }
 
 // ---------------------------------------------------------------------------
-// Wallet status and funds
-// ---------------------------------------------------------------------------
-
-export interface WalletRecord {
-  id?: string;
-  provider: string;
-  email?: string | null;
-  wallet_address: string;
-  chain_id: number;
-  metadata?: Record<string, unknown> | null;
-  linked_at?: string;
-  updated_at?: string;
-}
-
-export interface WalletStatus {
-  linked: boolean;
-  provider: string;
-  wallet: WalletRecord | null;
-  ownerWallet?: WalletRecord | null;
-  depositWallet?: WalletRecord | null;
-  tradingWallet?: WalletRecord | null;
-  depositWalletReady?: boolean;
-  depositWalletDeployed?: boolean;
-  depositWalletApproved?: boolean;
-  relayerUrl?: string | null;
-  relayerConfigured?: boolean;
-  /** Legacy response fields kept optional for older servers. */
-  magicPublishableKey?: string | null;
-  magicPublishableKeyConfigured?: boolean;
-}
-
-export type WalletAssetKey = "pUsd" | "usdcE" | "matic";
-
-export interface WalletBalanceAsset {
-  symbol: string;
-  name: string;
-  address: string | null;
-  decimals: number;
-  balanceRaw: string;
-  balance: string;
-  ok: boolean;
-  error?: string;
-}
-
-export interface WalletBalances {
-  walletAddress: string;
-  chainId: number;
-  updatedAt: string;
-  available: WalletBalanceAsset;
-  assets: Record<WalletAssetKey, WalletBalanceAsset>;
-}
-
-export interface WalletDepositResponse {
-  action: "deposit";
-  mode: "direct" | "bridge";
-  direct: {
-    publicDepositAddress: string;
-    walletAddress: string;
-    chainId: number;
-    network: string;
-    assets: Record<WalletAssetKey, WalletBalanceAsset>;
-    warning: string;
-  };
-  bridge?: {
-    address?: Record<string, string>;
-    note?: string;
-    warnings?: { code?: string; message?: string }[];
-    [key: string]: unknown;
-  };
-}
-
-export interface WalletWithdrawIntent {
-  id: string;
-  status: "pending" | "submitted" | "succeeded" | "failed" | "cancelled" | "expired";
-  walletAddress: string;
-  amount: string;
-  amountBaseUnit: string;
-  fromChainId: string;
-  fromTokenAddress: string;
-  toChainId: string;
-  toTokenAddress: string;
-  recipientAddress: string;
-  bridgeAddresses: Record<string, string>;
-  quote?: Record<string, unknown>;
-  txHash?: string | null;
-  error?: string | null;
-  expiresAt: string;
-  createdAt?: string;
-  updatedAt?: string;
-  signingUrl: string;
-}
-
-export interface WalletWithdrawIntentResponse {
-  intent: WalletWithdrawIntent;
-}
-
-// ---------------------------------------------------------------------------
 // Feed result — matches getFeed tool output from the web agent
 // ---------------------------------------------------------------------------
 
@@ -453,65 +356,150 @@ export interface SignalAnalysisApiResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Persisted LP workflow API responses
+// Directional quote preview — mirrors POST /api/quote
 // ---------------------------------------------------------------------------
 
-export interface LpScanResponse extends FeedResult {
-  scanId: string;
-  strategyId: string;
-  topic: string;
-  profile: string;
-  evidenceSaved: number;
-  filters?: Record<string, unknown>;
+export type QuoteAction = "BUY" | "SELL";
+export type QuoteOutcome = "YES" | "NO";
+export type QuoteRoute = "auto" | "aggressive" | "passive";
+export type SelectedQuoteRoute = Exclude<QuoteRoute, "auto">;
+export type QuoteStatus = "READY" | "PARTIAL" | "PASSIVE_ONLY" | "SKIP" | "UNAVAILABLE";
+
+export type QuoteSize =
+  | { type: "cash"; amount_usd: number }
+  | { type: "shares"; shares: number };
+
+export interface QuotePreviewRequest {
+  instrument: string;
+  action: QuoteAction;
+  outcome: QuoteOutcome;
+  size: QuoteSize;
+  signal_forecast_id?: string;
+  portfolio_capital_usd?: number;
+  route?: QuoteRoute;
+  max_slippage_bps?: number;
+  kelly_fraction?: number;
+  max_allocation_pct?: number;
+  persist?: boolean;
 }
 
-export interface LpRecommendResponse {
-  mode?: string;
-  cycleId: string;
-  scanId?: string | null;
-  strategyId: string;
-  candidatesSubmitted: number;
-  allocationsSubmitted: number;
-  pnlContextCount: number;
-  pnlSynced: boolean;
-  approvalRequired: boolean;
-  decisions: AllocatorDecision[];
-  result: AllocatorCycleResult;
-  error?: string;
-}
-
-export interface LpEvaluationSummary {
-  snapshots: number;
-  markets: number;
-  realizedPnl: number;
-  unrealizedPnl: number;
-  cashPnl: number;
-  netPnl: number;
-  currentValue: number;
-  capitalLocked: number;
-  outcomes: Record<string, number>;
-}
-
-export interface LpPnlLesson {
-  market_slug?: string | null;
-  realized_pnl?: number;
-  unrealized_pnl?: number;
-  cash_pnl?: number;
-  net_pnl?: number;
-  capital_locked?: number;
-  outcome?: string;
-  lesson?: string;
+export interface QuotePreviewInstrument {
+  instrument_key: string;
+  venue_instrument_id: string;
+  slug: string;
+  event_slug: string | null;
+  question: string;
+  market_url: string;
+  condition_id: string;
+  token_id: string;
+  outcome: QuoteOutcome;
   [key: string]: unknown;
 }
 
-export interface LpEvaluateResponse {
-  strategyId: string;
-  walletAddress: string | null;
-  pnlSynced: boolean;
-  syncError: string | null;
-  summary: LpEvaluationSummary;
-  lessons: LpPnlLesson[];
+export interface QuotePreviewRequestSummary {
+  action: QuoteAction;
+  outcome: QuoteOutcome;
+  size: QuoteSize;
+  route_requested: QuoteRoute;
+  route_selected: SelectedQuoteRoute;
+  max_slippage_bps: number;
+  [key: string]: unknown;
+}
+
+export interface QuotePreviewMarket {
+  active: boolean;
+  closed: boolean;
+  accepting_orders: boolean;
+  end_date: string | null;
+  game_start_time: string | null;
+  best_bid: number | null;
+  best_ask: number | null;
+  spread: number | null;
+  bid_depth_shares: number;
+  ask_depth_shares: number;
+  minimum_order_size: number | null;
+  tick_size: number | null;
+  [key: string]: unknown;
+}
+
+export interface QuotePreviewFill {
+  requested_cash_usd: number | null;
+  requested_shares: number | null;
+  quoted_shares: number;
+  fillable_shares: number | null;
+  safety_capped_shares: number;
+  fill_ratio: number | null;
+  full_request: boolean;
+  average_price: number | null;
+  worst_price: number | null;
+  slippage_bps: number | null;
+  passive_limit_price: number | null;
+  fill_guaranteed: false;
+  [key: string]: unknown;
+}
+
+export interface QuotePreviewEconomics {
+  gross_notional_usd: number;
+  venue_fee_usd: number | null;
+  fee_rate: number | null;
+  fee_exponent: number | null;
+  fee_source: "clob_market_info" | null;
+  all_in_cost_usd: number | null;
+  net_proceeds_usd: number | null;
+  max_loss_usd: number | null;
+  max_payout_usd: number | null;
+  max_profit_usd: number | null;
+  foregone_payout_usd: number | null;
+  break_even_probability: number | null;
+  [key: string]: unknown;
+}
+
+export interface QuotePreviewSignal {
+  id: string | null;
+  source: "saved" | "inline";
+  forecast_yes: number;
+  lower_bound: number;
+  upper_bound: number;
+  outcome_probability: number;
+  conservative_probability: number;
+  midpoint_edge: number | null;
+  conservative_edge: number | null;
+  [key: string]: unknown;
+}
+
+export interface QuoteSizingSuggestion {
+  method: "fractional_kelly";
+  kelly_fraction: number;
+  max_allocation_pct: number;
+  raw_edge_fraction: number;
+  allocation_fraction: number;
+  suggested_max_spend_usd: number;
+  suggested_shares: number;
+  [key: string]: unknown;
+}
+
+export interface QuotePreview {
+  schema_version: 1;
+  id: string | null;
+  status: QuoteStatus;
+  venue: "polymarket";
+  instrument: QuotePreviewInstrument;
+  request: QuotePreviewRequestSummary;
+  market: QuotePreviewMarket;
+  fill: QuotePreviewFill;
+  economics: QuotePreviewEconomics;
+  signal: QuotePreviewSignal | null;
+  sizing_suggestion: QuoteSizingSuggestion | null;
+  risks: string[];
+  observed_at: string;
+  expires_at: string;
+  execution: {
+    supported: false;
+    reason: "preview_only";
+    [key: string]: unknown;
+  };
   error?: string;
+  [key: string]: unknown;
 }
 
 // ---------------------------------------------------------------------------

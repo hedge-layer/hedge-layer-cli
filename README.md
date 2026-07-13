@@ -56,15 +56,19 @@ hl brief "US China trade war tariffs"
 # 4. Or start an interactive research session
 hl research
 
-# 5. Run the manual liquidity-provider flow
+# 5. Preview a directional quote (analysis only; no order is submitted)
+hl quote "example-market" --action buy --outcome yes --cash 25
+
+# 6. Save a fresh quote preview with Signal-linked sizing context
+hl quote "example-market" --action buy --outcome yes --cash 25 \
+  --signal-id <forecast-id> --capital 1000 --save
+
+# 7. Run the advanced dry-run liquidity-provider planner
 hl --json feed liquidity-provider --limit 15 | jq '{ markets: .markets }' > markets.json
 hl lp allocator --markets markets.json
 your execution workflow
 
-# 6. Check linked wallet funds
-hl wallet balances
-
-# 7. Analyze a market probability edge
+# 8. Analyze a market probability edge
 hl signal analyze "https://polymarket.com/event/example-market"
 ```
 
@@ -73,16 +77,28 @@ hl signal analyze "https://polymarket.com/event/example-market"
 Full command documentation is available at
 [hedgelayer.ai/docs/cli](https://hedgelayer.ai/docs/cli).
 
-Liquidity-provider workflows are available under `hl lp`:
+Directional quote previews are available with `hl quote`:
 
 ```bash
-hl lp scan "liquidity opportunities"   # persist candidate evidence
-hl lp allocator --markets markets.json # run allocator agent on an explicit list
-hl lp recommend --scan-id <scan-id>    # recommend allocate/reduce/exit actions
-hl lp evaluate                         # summarize PnL lessons
+hl quote example-market --action buy --outcome yes --cash 25
+hl quote example-market --action buy --outcome no --shares 50 --route passive
+hl quote example-market --action sell --outcome yes --shares 20 --save
+hl --json quote example-market --action buy --outcome yes --cash 25
 ```
 
-The lightweight manual loop is:
+Quote reads public Polymarket market data and order-book depth, then reports the
+estimated fill, slippage, fees, cost or proceeds, payout risk, and optional
+Signal edge. It never signs or submits an order. `--cash` is BUY-only; SELL
+quotes require `--shares`.
+
+Advanced liquidity-provider planning remains available under `hl lp` as a
+dry-run-only API client:
+
+```bash
+hl lp allocator --markets markets.json
+```
+
+The lightweight LP planning loop is:
 
 ```bash
 hl feed ensemble --limit 25 --output candidates.json
@@ -97,32 +113,12 @@ your execution workflow ...
 `hl lp allocator` submits the candidate market list through the web API to the
 allocator agent. Allocator output shows target capital, quote regime, failed
 safety checks, and split spread/reward economics. Trade execution stays outside
-the `hl` allocator command.
+the `hl` CLI.
 
 `--allocations` tells the allocator what you already hold (enabling HOLD,
 REDUCE, and EXIT decisions), and `--pnl` feeds per-market PnL into its caution
 overlay so borderline allocations on losing markets are downgraded to WATCH or
 HOLD. Both flags accept the same external wallet/inventory export shape.
-
-Wallet commands are available under `hl wallet`:
-
-```bash
-hl wallet status                       # show linked owner and Polymarket deposit wallet status
-hl wallet balances                     # show available pUSD, USDC.e, and POL
-hl wallet funds                        # alias for balances
-hl wallet deposit                      # show public Polygon deposit address and assets
-hl wallet deposit --bridge             # also show Polymarket Bridge deposit addresses
-hl wallet withdraw --asset pUSD --amount 10 --to 0x...
-```
-
-`hl wallet withdraw` creates a withdrawal intent, opens the browser signing page,
-and polls until the deposit-wallet transfer succeeds, fails, or times out.
-The CLI token never receives wallet signing power.
-
-Withdrawals currently send `pUSD` from the linked Polymarket deposit wallet on Polygon.
-Keep a small `POL` balance in the owner wallet for Polygon gas; without native
-`POL`, the browser-signed transfer can fail even when the deposit wallet has
-enough `pUSD`.
 
 Signal-agent analysis is available under `hl signal`:
 
