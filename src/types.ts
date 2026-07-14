@@ -325,7 +325,7 @@ export interface SignalAnalysis {
   predicted_prob?: number | null;
   confidence?: string;
   research_findings?: string;
-  bayesian_reasoning?: string;
+  bayesian_analysis?: Record<string, unknown>;
   key_factors?: string[];
   probability_gap?: number | null;
   signal_strength?: "strong" | "weak" | "unknown" | string;

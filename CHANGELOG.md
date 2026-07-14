@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+
+- Replace the redundant Signal `bayesian_reasoning` type with the structured
+  `bayesian_analysis` response field.
+
 ## [3.0.0] - 2026-07-13
 
 ### Breaking Changes
