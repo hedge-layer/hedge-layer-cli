@@ -1,11 +1,9 @@
 import { Command } from "commander";
 import { registerAuthCommands } from "./commands/auth.js";
 import { registerBriefCommands } from "./commands/brief.js";
-
 import { registerProfileCommand } from "./commands/profile.js";
 import { registerResearchCommands } from "./commands/research.js";
 import { registerFeedCommand } from "./commands/feed.js";
-import { registerLpCommands } from "./commands/lp.js";
 import { registerSignalCommands } from "./commands/signal.js";
 import { registerQuoteCommand } from "./commands/quote.js";
 import * as out from "./output.js";
@@ -28,7 +26,6 @@ registerBriefCommands(program);
 registerProfileCommand(program);
 registerResearchCommands(program);
 registerFeedCommand(program);
-registerLpCommands(program);
 registerSignalCommands(program);
 registerQuoteCommand(program);
 

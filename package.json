@@ -1,6 +1,6 @@
 {
   "name": "@hedge-layer/cli",
-  "version": "3.0.1",
+  "version": "4.0.0",
   "description": "CLI for Hedge Layer — prediction market intelligence from the terminal",
   "type": "module",
   "bin": {

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Hedge Layer CLI (`@hedge-layer/cli`) — a TypeScript command-line client for the Hedge Layer prediction market intelligence platform at https://hedgelayer.ai. This is a thin HTTP client; there is no backend in this repo.
 
-Published on npm as `@hedge-layer/cli` (v3.0.0). Binary name: `hl`.
+Published on npm as `@hedge-layer/cli` (v4.0.0). Binary name: `hl`.
 
 ## Commands
 
@@ -33,10 +33,9 @@ Run the CLI after build: `node dist/index.mjs [options] [command]`
 | `hl research show <id>` | Display session details |
 | `hl research delete <id>` | Delete session |
 | `hl feed [lp-opportunity|liquid-new-or-long]` | Polymarket feed (`GET /api/feed`); optional screening shorthand, or flags only |
-| `hl feed ensemble` | Run multiple feed lenses, de-dupe by slug, and write daily candidates JSON for allocator handoff |
+| `hl feed ensemble` | Run multiple feed lenses, de-dupe by slug, and write ranked candidates JSON |
 | `hl signal analyze <url>` | Analyze probability edge through `/api/signal/analyze` |
 | `hl quote <slug-or-url>` | Preview Polymarket directional cost, liquidity, and risk through `/api/quote`; never executes |
-| `hl lp allocator --markets <file>` | Generate an advanced dry-run LP plan through `/api/lp/allocator` |
 | `hl auth login` | Interactive token setup |
 | `hl auth status` | Check authentication |
 | `hl auth logout` | Remove stored token |
@@ -65,7 +64,6 @@ Run the CLI after build: `node dist/index.mjs [options] [command]`
 | `src/commands/feed.ts` | `hl feed` → GET /api/feed |
 | `src/commands/signal.ts` | `hl signal analyze` → POST /api/signal/analyze |
 | `src/commands/quote.ts` | `hl quote` → POST /api/quote |
-| `src/commands/lp.ts` | `hl lp allocator` → POST /api/lp/allocator |
 | `src/feed-display.ts` | Shared terminal rendering for feed results |
 | `src/commands/auth.ts` | Auth login/status/logout |
 | `src/commands/profile.ts` | Profile display |
@@ -85,10 +83,9 @@ All calls go to `https://hedgelayer.ai` (or `--api-url` override):
 - `GET /api/feed` — Ranked market feed (same as chat `getFeed`; query params include `profile`, `sortBy`, `tag`, liquidity/volume filters)
 - `POST /api/signal/analyze` — Signal probability analysis
 - `POST /api/quote` — Non-executing directional quote preview
-- `POST /api/lp/allocator` — Dry-run LP allocation plan
 
-The v3 CLI has no wallet, withdrawal, order, or execution commands. Keep Quote
-and LP allocator integrations preview/dry-run-only.
+The v4 CLI has no wallet, withdrawal, allocation, order, or execution commands.
+Keep Quote preview-only.
 
 Auth: Bearer token via `Authorization: Bearer hl_*` header.
 
