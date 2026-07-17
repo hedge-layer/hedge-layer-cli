@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-07-17
+
+### Breaking Changes
+
+- Remove the public `hl lp allocator` command and its allocator-specific client
+  types, input parsers, output rendering, and tests. Allocator access remains a
+  server-side integration rather than part of the CLI.
+
 ## [3.0.1] - 2026-07-14
 
 ### Changed
@@ -241,6 +249,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Global options: `--json`, `--api-url`, `--token`, `--verbose`, `--no-color`
 - Token storage in `~/.hedgelayer/config.json`
 
+[4.0.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v4.0.0
+[3.0.1]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v3.0.1
 [3.0.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v3.0.0
 [2.2.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v2.2.0
 [2.1.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v2.1.0

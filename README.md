@@ -63,12 +63,7 @@ hl quote "example-market" --action buy --outcome yes --cash 25
 hl quote "example-market" --action buy --outcome yes --cash 25 \
   --signal-id <forecast-id> --capital 1000 --save
 
-# 7. Run the advanced dry-run liquidity-provider planner
-hl --json feed liquidity-provider --limit 15 | jq '{ markets: .markets }' > markets.json
-hl lp allocator --markets markets.json
-your execution workflow
-
-# 8. Analyze a market probability edge
+# 7. Analyze a market probability edge
 hl signal analyze "https://polymarket.com/event/example-market"
 ```
 
@@ -91,34 +86,16 @@ estimated fill, slippage, fees, cost or proceeds, payout risk, and optional
 Signal edge. It never signs or submits an order. `--cash` is BUY-only; SELL
 quotes require `--shares`.
 
-Advanced liquidity-provider planning remains available under `hl lp` as a
-dry-run-only API client:
+Liquidity allocation, wallet management, and trade execution are outside the
+official `hl` CLI.
 
-```bash
-hl lp allocator --markets markets.json
-```
-
-The lightweight LP planning loop is:
+For a broader discovery screen, `hl feed ensemble` runs several feed lenses
+(liquid core, active volume, movers, new markets, uncertainty, and LP quality),
+de-duplicates by slug, and writes a ranked candidate file:
 
 ```bash
 hl feed ensemble --limit 25 --output candidates.json
-# or: hl --json feed lp-opportunity --limit 15 > markets.json
-external-pnl-export --json > pnl.json   # optional: wallet PnL + live inventory
-hl lp allocator --markets candidates.json --pnl pnl.json --allocations pnl.json
-your execution workflow ...
 ```
-
-`hl feed ensemble` runs several feed lenses (liquid core, active volume, movers, new markets, uncertainty, and LP quality), de-duplicates by slug, and writes a daily candidate file.
-
-`hl lp allocator` submits the candidate market list through the web API to the
-allocator agent. Allocator output shows target capital, quote regime, failed
-safety checks, and split spread/reward economics. Trade execution stays outside
-the `hl` CLI.
-
-`--allocations` tells the allocator what you already hold (enabling HOLD,
-REDUCE, and EXIT decisions), and `--pnl` feeds per-market PnL into its caution
-overlay so borderline allocations on losing markets are downgraded to WATCH or
-HOLD. Both flags accept the same external wallet/inventory export shape.
 
 Signal-agent analysis is available under `hl signal`:
 
