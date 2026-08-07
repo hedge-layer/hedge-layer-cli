@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [4.0.1] - 2026-08-07
+
+### Security
+
+- Hide API token input during `hl auth login` so typed and pasted credentials
+  are not echoed to the terminal.
+
 ## [4.0.0] - 2026-07-17
 
 ### Breaking Changes
@@ -249,6 +256,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Global options: `--json`, `--api-url`, `--token`, `--verbose`, `--no-color`
 - Token storage in `~/.hedgelayer/config.json`
 
+[4.0.1]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v4.0.1
 [4.0.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v4.0.0
 [3.0.1]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v3.0.1
 [3.0.0]: https://github.com/hedge-layer/hedge-layer-cli/releases/tag/v3.0.0
