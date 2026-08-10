@@ -12,7 +12,7 @@ jobs:
       contents: read
     steps:
       # v6 runs on Node 24 (avoids deprecated Node 20 action runtime)
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v6
         with:
