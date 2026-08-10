@@ -14,7 +14,7 @@ jobs:
       # v6 runs on Node 24 (avoids deprecated Node 20 action runtime)
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
