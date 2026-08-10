@@ -36,7 +36,7 @@
     "url": "git+https://github.com/hedge-layer/hedge-layer-cli.git"
   },
   "dependencies": {
-    "chalk": "^5.4.1",
+    "chalk": "^6.0.0",
     "commander": "^13.1.0",
     "ora": "^8.2.0"
   },
