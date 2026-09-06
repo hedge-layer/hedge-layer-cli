@@ -66,8 +66,9 @@ a provider adds a tool.
 ## Execution
 
 Polymarket order submission, cancellation, and order lookup use locally signed
-venue requests. Create a Hedge Layer token with `trade` scope for these tools.
-New tokens are read-only by default. Inspect the exact schemas first:
+venue requests. Create a Hedge Layer token with `read` and `trade` scopes for
+submission and cancellation; order lookup requires `read`. New tokens are
+read-only by default. Inspect the exact schemas first:
 
 ```bash
 hl tools submit_polymarket_order
