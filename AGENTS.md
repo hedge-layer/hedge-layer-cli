@@ -1,27 +1,35 @@
-# AGENTS.md
+# Repository instructions
 
-## Cursor Cloud specific instructions
+This is `@hedge-layer/cli`, a thin TypeScript HTTP client for Hedge Layer's
+unified financial data and execution tools. There is no backend or agent in
+this repository. The `hl` binary requires Node.js 22 or later.
 
-This is a TypeScript CLI tool (`@hedge-layer/cli`) that acts as a thin client to the Hedge Layer API at `https://hedgelayer.ai`. There is no backend in this repo.
+## Architecture
 
-Hedge Layer is a prediction market intelligence platform. The v4 CLI provides terminal access to discovery, Signal analysis, non-executing directional quote previews, and Market Briefs.
+- `src/program.ts`: Commander command registration.
+- `src/commands/tools.ts`: `tools [name]` and `call <name>` with JSON input.
+- `src/client.ts`: authenticated HTTP requests to `/api/v1/tools`.
+- `src/commands/auth.ts`: hidden token prompt and catalog-based validation.
+- `src/config.ts`: private local credential configuration.
+- `src/index.ts`: entry point and process error handling.
 
-### Key commands
+Tool schemas and implementation belong to the server. Keep the CLI generic;
+do not add research workflows, provider SDKs, strategies, or mirrored domain
+types. MCP and HTTP calls must invoke the same server tools.
 
-See `package.json` scripts and `README.md` for standard commands:
+## Checks
 
-- **Build:** `npm run build` (produces `dist/index.mjs` via tsup)
-- **Dev watch:** `npm run dev`
-- **Run CLI:** `node dist/index.mjs [options] [command]`
-- **Tests:** `npm run test` (vitest — tests in `src/*.test.ts`)
-- **Lint:** `npm run lint` (eslint with typescript-eslint flat config)
+Run `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`.
+Integration tests build the binary and run it against a local mock HTTP server.
+No account, database, or external service is needed.
 
-### Running the CLI
+## Execution and credentials
 
-After `npm run build`, run the CLI with `node dist/index.mjs`. Most commands require an API token. Use `--api-url` to point to a local dev server or `--token` to supply a token inline.
+Never automatically retry tool calls, including submission and cancellation.
+Keep the complete MCP result and return nonzero for `isError: true`. Preserve
+signed request body strings exactly. Do not log tokens, arguments, or headers.
+Use HTTPS except for loopback development; reject redirects. Credentials are
+stored at `~/.hedgelayer/config.json` with mode `0600`.
 
-### Environment
-
-- Requires Node.js >= 22 (the VM has v22 pre-installed).
-- No Docker, databases, or external services needed locally.
-- User credentials stored at `~/.hedgelayer/config.json`.
+Flags override `HL_API_URL`/`HL_TOKEN`, which override saved configuration.
+The CLI does not load `.env` files.

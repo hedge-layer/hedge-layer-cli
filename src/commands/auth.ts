@@ -1,10 +1,10 @@
 import { Command } from "commander";
 import readline from "node:readline/promises";
 import { Writable } from "node:stream";
-import { loadConfig, saveConfig, clearConfig, configPath, DEFAULT_API_URL } from "../config.js";
+import { saveConfig, clearConfig, configPath } from "../config.js";
 import { ApiClient } from "../client.js";
-import type { UserProfile, GlobalOptions } from "../types.js";
-import * as out from "../output.js";
+import type { GlobalOptions } from "../types.js";
+import { json } from "../output.js";
 
 interface HiddenPromptOptions {
   input?: NodeJS.ReadableStream;
@@ -42,91 +42,41 @@ export async function promptHidden(
 export function registerAuthCommands(program: Command): void {
   const auth = program.command("auth").description("Manage API authentication");
 
-  auth
-    .command("login")
-    .description("Authenticate with a Hedge Layer API token")
-    .option("--api-url <url>", "API base URL", DEFAULT_API_URL)
-    .action(async (cmdOpts: { apiUrl?: string }) => {
-      const globalOpts = program.opts<GlobalOptions>();
-
-      out.heading("Hedge Layer CLI — Login");
-      process.stderr.write(
-        `Create an API token at ${out.bold("https://hedgelayer.ai/account/settings")} → API Tokens\n\n`,
-      );
-
-      const token = await promptHidden("Paste your API token: ");
-
-      if (!token.startsWith("hl_") || token.length !== 43) {
-        out.error('Invalid token format. Tokens start with "hl_" and are 43 characters.');
-        process.exit(1);
-      }
-
-      const apiUrl = globalOpts.apiUrl ?? cmdOpts.apiUrl ?? DEFAULT_API_URL;
-      const client = new ApiClient({ token, apiUrl });
-
-      process.stderr.write("\nValidating token...");
-      let profile: UserProfile;
-      try {
-        profile = await client.get<UserProfile>("/api/profile");
-      } catch {
-        process.stderr.write("\n");
-        out.error("Token validation failed. Check your token and try again.");
-        process.exit(1);
-      }
-      process.stderr.write(" done\n\n");
-
-      saveConfig({ api_url: apiUrl, token });
-
-      out.success(`Logged in as ${out.bold(profile.handle || profile.user_id)}`);
-      process.stderr.write(`  Config saved to ${out.dim(configPath())}\n`);
-    });
-
-  auth
-    .command("status")
-    .description("Show current authentication status")
+  auth.command("login")
+    .description("Validate and save an API token (hidden prompt, --token, or HL_TOKEN)")
     .action(async () => {
-      const globalOpts = program.opts<GlobalOptions>();
-      const config = loadConfig();
-      const token = globalOpts.token ?? config.token;
-
-      if (!token) {
-        out.warn("Not logged in. Run " + out.bold("hl auth login") + " to authenticate.");
-        process.exit(1);
-      }
-
-      const client = new ApiClient(globalOpts);
-
-      try {
-        const profile = await client.get<UserProfile>("/api/profile");
-        if (globalOpts.json) {
-          out.json({
-            authenticated: true,
-            handle: profile.handle,
-            user_id: profile.user_id,
-            api_url: client.apiUrl,
-          });
-        } else {
-          out.heading("Auth Status");
-          out.table(
-            [
-              ["Handle", out.bold(profile.handle || "(none)")],
-              ["User ID", profile.user_id],
-              ["API URL", client.apiUrl],
-              ["Config", configPath()],
-            ],
-          );
+      const options = program.opts<GlobalOptions>();
+      let token = options.token ?? process.env.HL_TOKEN;
+      if (token === undefined) {
+        if (!process.stdin.isTTY) {
+          throw new Error("Interactive login requires a terminal. Set HL_TOKEN for scripts.");
         }
-      } catch {
-        out.error("Token is invalid or expired. Run " + out.bold("hl auth login") + " to re-authenticate.");
-        process.exit(1);
+        process.stderr.write("Create an API token in Hedge Layer account settings.\n");
+        token = await promptHidden("Paste your API token: ");
       }
+      token = token.trim();
+      if (!token) throw new Error("API token cannot be empty.");
+      const client = new ApiClient({ ...options, token });
+      await client.listTools();
+      saveConfig({ api_url: client.apiUrl, token });
+      json({ authenticated: true, api_url: client.apiUrl, config: configPath() });
     });
 
-  auth
-    .command("logout")
-    .description("Remove stored API token")
+  auth.command("status")
+    .description("Validate the current API token")
+    .action(async () => {
+      const client = new ApiClient(program.opts<GlobalOptions>());
+      if (!client.isAuthenticated) {
+        throw new Error("No API token configured. Run hl auth login or set HL_TOKEN.");
+      }
+      await client.listTools();
+      json({ authenticated: true, api_url: client.apiUrl });
+    });
+
+  auth.command("logout")
+    .description("Remove the saved API token (HL_TOKEN and --token still apply)")
     .action(() => {
       clearConfig();
-      out.success("Logged out. Token removed from " + out.dim(configPath()));
+      json({ removed: true, config: configPath() });
     });
 }

@@ -1,7 +1,7 @@
 {
   "name": "@hedge-layer/cli",
-  "version": "4.0.1",
-  "description": "CLI for Hedge Layer — prediction market intelligence from the terminal",
+  "version": "5.0.0",
+  "description": "CLI for Hedge Layer — unified financial data and execution",
   "type": "module",
   "bin": {
     "hl": "dist/index.mjs"
@@ -15,16 +15,17 @@
     "lint": "eslint src/",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit"
   },
   "engines": {
     "node": ">=22"
   },
   "keywords": [
+    "finance",
+    "mcp",
     "polymarket",
-    "prediction-markets",
-    "market-intelligence",
-    "market-brief",
+    "trading",
     "cli"
   ],
   "publishConfig": {
@@ -36,9 +37,7 @@
     "url": "git+https://github.com/hedge-layer/hedge-layer-cli.git"
   },
   "dependencies": {
-    "chalk": "^5.4.1",
-    "commander": "^13.1.0",
-    "ora": "^8.2.0"
+    "commander": "^13.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

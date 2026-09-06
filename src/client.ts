@@ -1,203 +1,90 @@
-import type { GlobalOptions } from "./types.js";
 import { loadConfig, DEFAULT_API_URL } from "./config.js";
+import type { GlobalOptions, ToolCatalog, ToolResult } from "./types.js";
+
+export function validateApiUrl(value: string): string {
+  const url = new URL(value);
+  const loopback = url.hostname === "localhost" || url.hostname === "[::1]"
+    || /^127\.\d+\.\d+\.\d+$/.test(url.hostname);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
+    throw new Error("API URL must use HTTPS (HTTP is allowed for loopback development servers).");
+  }
+  if (url.username || url.password || url.pathname !== "/" || url.search || url.hash) {
+    throw new Error("API URL must be an origin, for example https://hedgelayer.ai.");
+  }
+  return url.origin;
+}
 
 export class ApiClient {
-  private baseUrl: string;
-  private token: string | null;
-  private verbose: boolean;
+  readonly apiUrl: string;
+  private readonly token: string | null;
+  private readonly verbose: boolean;
 
   constructor(opts: GlobalOptions = {}) {
     const config = loadConfig();
-    this.baseUrl = (opts.apiUrl ?? config.api_url ?? DEFAULT_API_URL).replace(/\/$/, "");
-    this.token = opts.token ?? config.token ?? null;
+    this.apiUrl = validateApiUrl(opts.apiUrl ?? process.env.HL_API_URL ?? config.api_url ?? DEFAULT_API_URL);
+    this.token = opts.token ?? process.env.HL_TOKEN ?? config.token;
     this.verbose = opts.verbose ?? false;
   }
 
   get isAuthenticated(): boolean {
-    return this.token !== null;
+    return Boolean(this.token);
   }
 
-  get apiUrl(): string {
-    return this.baseUrl;
+  async listTools(): Promise<ToolCatalog> {
+    const result = await this.request<ToolCatalog>("GET", "/api/v1/tools");
+    if (!Array.isArray(result?.tools)) throw new Error("API returned an invalid tool catalog.");
+    return result;
   }
 
-  private headers(extra: Record<string, string> = {}): Record<string, string> {
-    const h: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...extra,
-    };
-    if (this.token) {
-      h["Authorization"] = `Bearer ${this.token}`;
+  async callTool(name: string, args: Record<string, unknown>): Promise<ToolResult> {
+    if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+      throw new Error("Tool names may contain only letters, numbers, underscores, and hyphens.");
     }
-    return h;
-  }
-
-  private log(method: string, path: string, status?: number): void {
-    if (!this.verbose) return;
-    const statusStr = status ? ` → ${status}` : "";
-    process.stderr.write(`[verbose] ${method} ${this.baseUrl}${path}${statusStr}\n`);
-  }
-
-  async get<T>(path: string, params?: Record<string, string>): Promise<T> {
-    const url = new URL(path, this.baseUrl);
-    if (params) {
-      for (const [k, v] of Object.entries(params)) {
-        if (v !== undefined && v !== "") url.searchParams.set(k, v);
-      }
+    const result = await this.request<ToolResult>("POST", `/api/v1/tools/${name}`, { arguments: args });
+    if (!Array.isArray(result?.content) || (result.isError !== undefined && typeof result.isError !== "boolean")) {
+      throw new Error("API returned an invalid tool result.");
     }
-
-    this.log("GET", `${url.pathname}${url.search}`);
-    const res = await fetch(url.toString(), { headers: this.headers() });
-    this.log("GET", `${url.pathname}${url.search}`, res.status);
-
-    if (!res.ok) {
-      const body = await res.text();
-      throw new ApiError(res.status, body);
-    }
-    return res.json() as Promise<T>;
+    return result;
   }
 
-  async post<T>(path: string, body?: unknown): Promise<T> {
-    this.log("POST", path);
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      method: "POST",
-      headers: this.headers(),
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+  private async request<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (this.token) headers.Authorization = `Bearer ${this.token}`;
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    const url = `${this.apiUrl}${path}`;
+    if (this.verbose) process.stderr.write(`${method} ${url}\n`);
+
+    // Never retry a tool call: it may submit or cancel an order.
+    const response = await fetch(url, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      redirect: "error",
+      signal: AbortSignal.timeout(65_000),
     });
-    this.log("POST", path, res.status);
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new ApiError(res.status, text);
-    }
-    return res.json() as Promise<T>;
-  }
-
-  /**
-   * POST /api/brief with stream: false — returns the Market Brief JSON body
-   * plus optional telemetry from response headers.
-   */
-  async postBriefSync(query: string): Promise<{
-    brief: Record<string, unknown>;
-    durationMs: number | null;
-    stepsCompleted: number | null;
-    toolsUsed: string[];
-  }> {
-    const path = "/api/brief";
-    this.log("POST", path);
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      method: "POST",
-      headers: this.headers(),
-      body: JSON.stringify({ query, stream: false }),
-    });
-    this.log("POST", path, res.status);
-
-    const text = await res.text();
-    if (!res.ok) {
-      throw new ApiError(res.status, text);
-    }
-
-    let brief: Record<string, unknown>;
+    if (this.verbose) process.stderr.write(`HTTP ${response.status}\n`);
+    const text = await response.text();
+    if (!response.ok) throw new ApiError(response.status, text);
     try {
-      brief = JSON.parse(text) as Record<string, unknown>;
+      return JSON.parse(text) as T;
     } catch {
-      throw new ApiError(res.status, text || "Invalid JSON from /api/brief");
+      throw new Error(`API returned invalid JSON (HTTP ${response.status}).`);
     }
-
-    const dur = res.headers.get("X-Duration-Ms");
-    const steps = res.headers.get("X-Steps-Completed");
-    const tools = res.headers.get("X-Tools-Used");
-
-    return {
-      brief,
-      durationMs: dur != null ? Number(dur) : null,
-      stepsCompleted: steps != null ? Number(steps) : null,
-      toolsUsed: tools ? tools.split(",").filter(Boolean) : [],
-    };
-  }
-
-  async patch<T>(path: string, body: unknown): Promise<T> {
-    this.log("PATCH", path);
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      method: "PATCH",
-      headers: this.headers(),
-      body: JSON.stringify(body),
-    });
-    this.log("PATCH", path, res.status);
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new ApiError(res.status, text);
-    }
-    return res.json() as Promise<T>;
-  }
-
-  async delete(path: string): Promise<void> {
-    this.log("DELETE", path);
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      method: "DELETE",
-      headers: this.headers(),
-    });
-    this.log("DELETE", path, res.status);
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new ApiError(res.status, text);
-    }
-  }
-
-  async stream(path: string, body: unknown): Promise<ReadableStream<Uint8Array>> {
-    this.log("POST (stream)", path);
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      method: "POST",
-      headers: this.headers({ Accept: "text/event-stream" }),
-      body: JSON.stringify(body),
-    });
-    this.log("POST (stream)", path, res.status);
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new ApiError(res.status, text);
-    }
-    if (!res.body) {
-      throw new ApiError(0, "No response body for stream");
-    }
-    return res.body;
-  }
-
-  async streamNdjson(path: string, body: unknown): Promise<ReadableStream<Uint8Array>> {
-    this.log("POST (ndjson)", path);
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      method: "POST",
-      headers: this.headers({ Accept: "application/x-ndjson" }),
-      body: JSON.stringify(body),
-    });
-    this.log("POST (ndjson)", path, res.status);
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new ApiError(res.status, text);
-    }
-    if (!res.body) {
-      throw new ApiError(0, "No response body for stream");
-    }
-    return res.body;
   }
 }
 
 export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public body: string,
-  ) {
-    let msg: string;
+  constructor(readonly status: number, body: string) {
+    let message = body || "Request failed";
     try {
       const parsed = JSON.parse(body);
-      msg = parsed.error ?? parsed.message ?? body;
+      if (typeof parsed?.error === "string") message = parsed.error;
+      else if (typeof parsed?.error?.message === "string") message = parsed.error.message;
+      else if (typeof parsed?.message === "string") message = parsed.message;
     } catch {
-      msg = body;
+      // Keep the response text for non-JSON errors.
     }
-    super(`API error ${status}: ${msg}`);
+    super(`API error ${status}: ${message}`);
     this.name = "ApiError";
   }
 }
