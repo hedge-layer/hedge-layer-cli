@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## [5.0.0] - 2026-09-06
 
 - Replace the research CLI with `hl tools [name]` and `hl call <name>` against
   Hedge Layer's shared HTTP/MCP tool catalog.

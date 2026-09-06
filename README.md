@@ -21,11 +21,10 @@ submission, lookup, and cancellation. Matching and settlement stay at the venue.
 npm install -g @hedge-layer/cli@5
 ```
 
-These instructions describe CLI 5.x and require Node.js 22 or later. Install
-5.x once it is published; before then, build this checkout using the
+CLI 5.x requires Node.js 22 or later and a Hedge Layer server providing the
+`/api/v1/tools` API. To build from source, follow the
 [development instructions](#development) and replace `hl` in the examples with
-`node dist/index.mjs`. The server must provide the `/api/v1/tools` API introduced
-by the unified-layer refactor.
+`node dist/index.mjs`.
 
 ## Quick start
 
