@@ -1,21 +1,31 @@
 # @hedge-layer/cli
 
-Hedge Layer is a unified layer for financial data and trade execution. The `hl`
-CLI calls its HTTP API; MCP clients use the same tools through `/mcp`. Agent H
-is the supported agent client, and you can also use Codex, Claude Code, Python,
-or any other client that can call the API.
+[Hedge Layer](https://github.com/hedge-layer/hedge-layer) is a unified layer for
+financial data and trade execution. Its main service exposes tools through MCP
+at `/mcp` and the HTTP API. The `hl` CLI calls that API to offer the same
+operations to agents and scripts that prefer command-line tools. The web app
+provides connection instructions and API token management.
 
-The CLI contains no research agent or trading strategy. It discovers tool
-schemas from the server and forwards the arguments you supply.
+[Agent H](https://github.com/hedge-layer/agent-h) is the native MCP agent and an
+optional client. You can use Codex, Claude Code, Python, or any other compatible
+client. Research workflows belong to the chosen agent; the CLI discovers tool
+schemas from the service and forwards the arguments you supply.
+
+Current tools cover Polymarket and Hyperliquid market search, Polymarket market
+data and order books, web evidence search, and locally signed Polymarket order
+submission, lookup, and cancellation. Matching and settlement stay at the venue.
 
 ## Install
 
 ```bash
-npm install -g @hedge-layer/cli
+npm install -g @hedge-layer/cli@5
 ```
 
-Requires Node.js 22 or later. These commands require a Hedge Layer server with
-the `/api/v1/tools` API introduced by the unified-layer refactor.
+These instructions describe CLI 5.x and require Node.js 22 or later. Install
+5.x once it is published; before then, build this checkout using the
+[development instructions](#development) and replace `hl` in the examples with
+`node dist/index.mjs`. The server must provide the `/api/v1/tools` API introduced
+by the unified-layer refactor.
 
 ## Quick start
 
