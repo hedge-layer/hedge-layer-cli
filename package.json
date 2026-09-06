@@ -37,7 +37,7 @@
     "url": "git+https://github.com/hedge-layer/hedge-layer-cli.git"
   },
   "dependencies": {
-    "commander": "^13.1.0"
+    "commander": "^15.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
