@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, chmodSync, existsSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
@@ -22,8 +22,8 @@ export function loadConfig(): Config {
     const raw = readFileSync(CONFIG_FILE, "utf-8");
     const parsed = JSON.parse(raw);
     return {
-      api_url: parsed.api_url ?? DEFAULT_API_URL,
-      token: parsed.token ?? null,
+      api_url: typeof parsed.api_url === "string" ? parsed.api_url : DEFAULT_API_URL,
+      token: typeof parsed.token === "string" ? parsed.token : null,
     };
   } catch {
     return defaultConfig();
@@ -31,15 +31,16 @@ export function loadConfig(): Config {
 }
 
 export function saveConfig(config: Config): void {
-  mkdirSync(CONFIG_DIR, { recursive: true });
-  writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2) + "\n", "utf-8");
+  mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
+  writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2) + "\n", { encoding: "utf-8", mode: 0o600 });
+  chmodSync(CONFIG_FILE, 0o600);
 }
 
 export function clearConfig(): void {
   try {
     if (existsSync(CONFIG_FILE)) unlinkSync(CONFIG_FILE);
-  } catch {
-    // ignore
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
 }
 

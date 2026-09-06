@@ -1,194 +1,104 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { ApiClient, ApiError } from "./client.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiClient, ApiError, validateApiUrl } from "./client.js";
 
 vi.mock("./config.js", () => ({
-  loadConfig: () => ({ api_url: "https://test.example.com", token: null }),
+  loadConfig: () => ({ api_url: "https://saved.example", token: "saved-token" }),
   DEFAULT_API_URL: "https://hedgelayer.ai",
 }));
 
+beforeEach(() => {
+  vi.stubEnv("HL_API_URL", undefined);
+  vi.stubEnv("HL_TOKEN", undefined);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
+
+describe("API origin", () => {
+  it.each(["https://example.com", "http://localhost:3000", "http://127.0.0.1:3000", "http://[::1]:3000"])(
+    "allows %s", (url) => expect(validateApiUrl(`${url}/`)).toBe(url),
+  );
+
+  it.each([
+    "http://example.com", "http://localhost.example.com", "ftp://localhost", "https://user:pass@example.com",
+    "https://example.com/mcp", "https://example.com/?token=secret", "https://example.com/#fragment",
+  ])("rejects %s", (url) => expect(() => validateApiUrl(url)).toThrow());
+});
+
 describe("ApiClient", () => {
-  describe("constructor", () => {
-    it("uses config values by default", () => {
-      const client = new ApiClient();
-      expect(client.apiUrl).toBe("https://test.example.com");
-      expect(client.isAuthenticated).toBe(false);
-    });
-
-    it("overrides with explicit options", () => {
-      const client = new ApiClient({
-        apiUrl: "https://custom.api",
-        token: "hl_test123",
-      });
-      expect(client.apiUrl).toBe("https://custom.api");
-      expect(client.isAuthenticated).toBe(true);
-    });
-
-    it("strips trailing slash from URL", () => {
-      const client = new ApiClient({ apiUrl: "https://example.com/" });
-      expect(client.apiUrl).toBe("https://example.com");
-    });
+  it("uses flags before environment before saved configuration", async () => {
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({ tools: [] }));
+    await new ApiClient().listTools();
+    expect(fetch).toHaveBeenLastCalledWith("https://saved.example/api/v1/tools", expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: "Bearer saved-token" }),
+    }));
+    vi.stubEnv("HL_API_URL", "https://environment.example");
+    vi.stubEnv("HL_TOKEN", "environment-token");
+    await new ApiClient().listTools();
+    expect(fetch).toHaveBeenLastCalledWith("https://environment.example/api/v1/tools", expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: "Bearer environment-token" }),
+    }));
+    await new ApiClient({ apiUrl: "https://flag.example", token: "flag-token" }).listTools();
+    expect(fetch).toHaveBeenLastCalledWith("https://flag.example/api/v1/tools", expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: "Bearer flag-token" }),
+    }));
   });
 
-  describe("get", () => {
-    let fetchSpy: ReturnType<typeof vi.spyOn>;
-
-    beforeEach(() => {
-      fetchSpy = vi.spyOn(globalThis, "fetch");
-    });
-
-    afterEach(() => {
-      fetchSpy.mockRestore();
-    });
-
-    it("makes a GET request and returns parsed JSON", async () => {
-      fetchSpy.mockResolvedValue(
-        new Response(JSON.stringify({ data: "ok" }), { status: 200 }),
-      );
-
-      const client = new ApiClient({ apiUrl: "https://api.test" });
-      const result = await client.get<{ data: string }>("/endpoint");
-      expect(result).toEqual({ data: "ok" });
-
-      const calledUrl = fetchSpy.mock.calls[0][0] as string;
-      expect(calledUrl).toContain("/endpoint");
-    });
-
-    it("appends query parameters", async () => {
-      fetchSpy.mockResolvedValue(
-        new Response(JSON.stringify({}), { status: 200 }),
-      );
-
-      const client = new ApiClient({ apiUrl: "https://api.test" });
-      await client.get("/search", { q: "flood", limit: "10" });
-
-      const calledUrl = fetchSpy.mock.calls[0][0] as string;
-      expect(calledUrl).toContain("q=flood");
-      expect(calledUrl).toContain("limit=10");
-    });
-
-    it("throws ApiError on non-ok response", async () => {
-      fetchSpy.mockResolvedValue(
-        new Response(JSON.stringify({ error: "Not found" }), { status: 404 }),
-      );
-
-      const client = new ApiClient({ apiUrl: "https://api.test" });
-      await expect(client.get("/missing")).rejects.toThrow("API error 404: Not found");
-    });
-
-    it("includes auth header when token is set", async () => {
-      fetchSpy.mockResolvedValue(
-        new Response(JSON.stringify({}), { status: 200 }),
-      );
-
-      const client = new ApiClient({
-        apiUrl: "https://api.test",
-        token: "hl_mytoken",
-      });
-      await client.get("/authed");
-
-      const opts = fetchSpy.mock.calls[0][1] as RequestInit;
-      const headers = opts.headers as Record<string, string>;
-      expect(headers["Authorization"]).toBe("Bearer hl_mytoken");
-    });
+  it("preserves signed payload bytes inside the arguments envelope and returns the whole MCP result", async () => {
+    const result = { content: [], structuredContent: { orderID: "order-1" }, isError: false };
+    const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json(result));
+    const signedBody = '{ "order": { "signature": "signed-value" }, "orderType": "GTC" }';
+    const args = { signed_body: signedBody, auth: { signature: "header-signature" } };
+    expect(await new ApiClient().callTool("submit_polymarket_order", args)).toEqual(result);
+    const [, request] = fetch.mock.calls[0];
+    expect(JSON.parse(request!.body as string)).toEqual({ arguments: args });
+    expect(request).toMatchObject({ method: "POST", redirect: "error" });
+    expect(request!.signal).toBeInstanceOf(AbortSignal);
   });
 
-  describe("post", () => {
-    let fetchSpy: ReturnType<typeof vi.spyOn>;
-
-    beforeEach(() => {
-      fetchSpy = vi.spyOn(globalThis, "fetch");
-    });
-
-    afterEach(() => {
-      fetchSpy.mockRestore();
-    });
-
-    it("makes a POST request with JSON body", async () => {
-      fetchSpy.mockResolvedValue(
-        new Response(JSON.stringify({ id: "abc" }), { status: 200 }),
-      );
-
-      const client = new ApiClient({ apiUrl: "https://api.test" });
-      const result = await client.post<{ id: string }>("/create", {
-        name: "test",
-      });
-      expect(result).toEqual({ id: "abc" });
-
-      const opts = fetchSpy.mock.calls[0][1] as RequestInit;
-      expect(opts.method).toBe("POST");
-      expect(opts.body).toBe(JSON.stringify({ name: "test" }));
-    });
+  it.each(["../api/tokens", "..", "name?x=1", "name/other"])("rejects unsafe tool path %s", async (name) => {
+    const fetch = vi.spyOn(globalThis, "fetch");
+    await expect(new ApiClient().callTool(name, {})).rejects.toThrow("Tool names");
+    expect(fetch).not.toHaveBeenCalled();
   });
 
-  describe("postBriefSync", () => {
-    let fetchSpy: ReturnType<typeof vi.spyOn>;
-
-    beforeEach(() => {
-      fetchSpy = vi.spyOn(globalThis, "fetch");
-    });
-
-    afterEach(() => {
-      fetchSpy.mockRestore();
-    });
-
-    it("POSTs /api/brief with stream false and parses headers", async () => {
-      const brief = { title: "T", markets: [], thesis: "", watchlist: [], gaps: [], marketCount: 0, createdAt: "" };
-      const res = new Response(JSON.stringify(brief), { status: 200 });
-      res.headers.set("X-Duration-Ms", "1500");
-      res.headers.set("X-Steps-Completed", "3");
-      res.headers.set("X-Tools-Used", "a,b");
-      fetchSpy.mockResolvedValue(res);
-
-      const client = new ApiClient({ apiUrl: "https://api.test", token: "hl_t" });
-      const out = await client.postBriefSync("q");
-
-      expect(out.brief).toEqual(brief);
-      expect(out.durationMs).toBe(1500);
-      expect(out.stepsCompleted).toBe(3);
-      expect(out.toolsUsed).toEqual(["a", "b"]);
-
-      const opts = fetchSpy.mock.calls[0][1] as RequestInit;
-      expect(opts.body).toBe(JSON.stringify({ query: "q", stream: false }));
-    });
+  it("does not retry ambiguous execution network failures or log credentials", async () => {
+    const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("fetch failed"));
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const client = new ApiClient({ verbose: true, token: "private-token" });
+    await expect(client.callTool("submit_polymarket_order", { signed_body: "private-order" })).rejects.toThrow("fetch failed");
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(stderr.mock.calls.map(([line]) => line).join("")).toBe("POST https://saved.example/api/v1/tools/submit_polymarket_order\n");
   });
 
-  describe("delete", () => {
-    let fetchSpy: ReturnType<typeof vi.spyOn>;
+  it("surfaces HTTP errors without retrying", async () => {
+    const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ error: "Missing trade scope" }, { status: 403 }));
+    await expect(new ApiClient().callTool("submit_polymarket_order", {})).rejects.toThrow("API error 403: Missing trade scope");
+    expect(fetch).toHaveBeenCalledOnce();
+  });
 
-    beforeEach(() => {
-      fetchSpy = vi.spyOn(globalThis, "fetch");
-    });
+  it("reports invalid JSON responses", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("<html>"));
+    await expect(new ApiClient().listTools()).rejects.toThrow("API returned invalid JSON");
+  });
 
-    afterEach(() => {
-      fetchSpy.mockRestore();
-    });
-
-    it("makes a DELETE request", async () => {
-      fetchSpy.mockResolvedValue(new Response(null, { status: 204 }));
-
-      const client = new ApiClient({ apiUrl: "https://api.test" });
-      await client.delete("/resource/123");
-
-      const opts = fetchSpy.mock.calls[0][1] as RequestInit;
-      expect(opts.method).toBe("DELETE");
-    });
+  it("does not treat a malformed success response as a successful tool call", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({}));
+    await expect(new ApiClient().callTool("submit_polymarket_order", {})).rejects.toThrow("invalid tool result");
+    await expect(new ApiClient().listTools()).rejects.toThrow("invalid tool catalog");
   });
 });
 
 describe("ApiError", () => {
-  it("parses JSON error body", () => {
-    const err = new ApiError(400, JSON.stringify({ error: "Bad request" }));
-    expect(err.message).toBe("API error 400: Bad request");
-    expect(err.status).toBe(400);
-  });
-
-  it("falls back to raw body for non-JSON", () => {
-    const err = new ApiError(500, "Internal Server Error");
-    expect(err.message).toBe("API error 500: Internal Server Error");
-  });
-
-  it("uses message field if error field is absent", () => {
-    const err = new ApiError(422, JSON.stringify({ message: "Validation failed" }));
-    expect(err.message).toBe("API error 422: Validation failed");
+  it.each([
+    ['{"error":"denied"}', "denied"],
+    ['{"error":{"message":"denied"}}', "denied"],
+    ['{"message":"denied"}', "denied"],
+    ["upstream unavailable", "upstream unavailable"],
+    ["", "Request failed"],
+  ])("preserves useful failure information from %s", (body, expected) => {
+    expect(new ApiError(403, body).message).toBe(`API error 403: ${expected}`);
   });
 });

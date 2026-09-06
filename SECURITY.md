@@ -18,10 +18,12 @@ We will acknowledge receipt within 48 hours and aim to provide a fix or mitigati
 
 | Version | Supported |
 |---------|-----------|
-| 0.x     | Yes       |
+| Latest release | Yes |
 
 ## Token Security
 
-- API tokens are stored locally in `~/.hedgelayer/config.json` and are never sent to third parties.
-- Tokens are only transmitted to the Hedge Layer API over HTTPS.
+- API tokens are stored locally in `~/.hedgelayer/config.json` with file mode `0600`.
+- Tokens are transmitted to your configured API origin over HTTPS (HTTP is allowed for loopback development). Redirects are rejected.
+- Execution payloads contain venue authentication. Supply them through stdin or private files; never include wallet private keys or CLOB API secrets.
+- The CLI does not retry tool calls. Reconcile an ambiguous order outcome before resubmitting.
 - Never commit tokens or `.env` files to version control.

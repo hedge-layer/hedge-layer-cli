@@ -1,113 +1,142 @@
 # @hedge-layer/cli
 
-[![npm version](https://img.shields.io/npm/v/@hedge-layer/cli)](https://www.npmjs.com/package/@hedge-layer/cli)
-[![license](https://img.shields.io/github/license/hedge-layer/hedge-layer-cli)](LICENSE)
+[Hedge Layer](https://github.com/hedge-layer/hedge-layer) is a unified layer for
+financial data and trade execution. Its main service exposes tools through MCP
+at `/mcp` and the HTTP API. The `hl` CLI calls that API to offer the same
+operations to agents and scripts that prefer command-line tools. The web app
+provides connection instructions and API token management.
 
-Command-line interface for [Hedge Layer](https://hedgelayer.ai): prediction market intelligence from the terminal.
+[Agent H](https://github.com/hedge-layer/agent-h) is the native MCP agent and an
+optional client. You can use Codex, Claude Code, Python, or any other compatible
+client. Research workflows belong to the chosen agent; the CLI discovers tool
+schemas from the service and forwards the arguments you supply.
 
-The canonical CLI guide now lives in the Hedge Layer web app docs:
-[hedgelayer.ai/docs/cli](https://hedgelayer.ai/docs/cli).
+Current tools cover Polymarket and Hyperliquid market search, Polymarket market
+data and order books, web evidence search, and locally signed Polymarket order
+submission, lookup, and cancellation. Matching and settlement stay at the venue.
 
 ## Install
 
 ```bash
-npm install -g @hedge-layer/cli
+npm install -g @hedge-layer/cli@5
 ```
 
-Requires Node.js 22 or later.
+CLI 5.x requires Node.js 22 or later and a Hedge Layer server providing the
+`/api/v1/tools` API. To build from source, follow the
+[development instructions](#development) and replace `hl` in the examples with
+`node dist/index.mjs`.
 
-### Install troubleshooting
+## Quick start
 
-- **`EACCES` / "operation was rejected by your operating system"** on `npm install -g`:
-  your npm prefix points at a root-owned directory (e.g. `/usr/lib/node_modules`) and you
-  don't have `sudo`. Install into a user-writable prefix instead:
-
-  ```bash
-  mkdir -p "$HOME/.npm-global"
-  npm config set prefix "$HOME/.npm-global"
-  export PATH="$HOME/.npm-global/bin:$PATH"   # add to your shell rc to persist
-  npm install -g @hedge-layer/cli
-  ```
-
-- **`nvm` warns `npmrc ... globalconfig and/or prefix setting ... incompatible with nvm`:**
-  this is harmless shell-init noise from `nvm` (not from `hl`) that appears after setting a
-  custom npm prefix as above — the CLI still works. To avoid it entirely under `nvm`, install
-  without a custom prefix (nvm's per-version `bin/` is already user-writable):
-
-  ```bash
-  npm config delete prefix
-  npm config delete globalconfig
-  nvm use --delete-prefix "$(node -v)" --silent
-  npm install -g @hedge-layer/cli
-  ```
-
-  Alternatively, skip the global install and run on demand with `npx @hedge-layer/cli <command>`.
-
-## Quick Start
+Create an API token in your Hedge Layer account settings, then:
 
 ```bash
-# 1. Create an API token at https://hedgelayer.ai/account/settings
-# 2. Authenticate the CLI
 hl auth login
-
-# 3. Generate a Market Brief
-hl brief "US China trade war tariffs"
-
-# 4. Or start an interactive research session
-hl research
-
-# 5. Preview a directional quote (analysis only; no order is submitted)
-hl quote "example-market" --action buy --outcome yes --cash 25
-
-# 6. Save a fresh quote preview with Signal-linked sizing context
-hl quote "example-market" --action buy --outcome yes --cash 25 \
-  --signal-id <forecast-id> --capital 1000 --save
-
-# 7. Analyze a market probability edge
-hl signal analyze "https://polymarket.com/event/example-market"
+hl tools
+hl tools search_markets
+hl call search_markets --args '{"query":"bitcoin","venues":["polymarket","hyperliquid"],"limit":5}'
+hl call list_polymarket_markets
+hl call get_polymarket_orderbook --args '{"token_id":"<token-id>"}'
 ```
+
+`hl auth login` hides token input. For scripts, provide `HL_TOKEN` through your
+shell or secret manager. Set `HL_API_URL` to use another server, or pass
+`--api-url http://localhost:3000` for local development.
 
 ## Commands
 
-Full command documentation is available at
-[hedgelayer.ai/docs/cli](https://hedgelayer.ai/docs/cli).
+| Command | Behavior |
+| --- | --- |
+| `hl tools [name]` | List the server's tools and JSON Schemas, or inspect one tool |
+| `hl call <name> [--args <json> \| --file <path> \| --stdin]` | Invoke a tool with a JSON object; defaults to `{}` |
+| `hl auth login` | Validate and save an API token |
+| `hl auth status` | Validate the active token against the tool catalog |
+| `hl auth logout` | Remove the saved token; environment variables and flags still apply |
 
-Directional quote previews are available with `hl quote`:
+All successful command output is JSON on stdout. Prompts and diagnostics go to
+stderr. `hl call` preserves the complete MCP result, including `content`,
+`structuredContent`, and `isError`. Tool errors (`isError: true`) retain their
+JSON output and exit with status 1. HTTP, network, and input errors also exit
+with status 1, with a JSON error on stderr. Command-line usage errors are
+printed by the argument parser.
 
-```bash
-hl quote example-market --action buy --outcome yes --cash 25
-hl quote example-market --action buy --outcome no --shares 50 --route passive
-hl quote example-market --action sell --outcome yes --shares 20 --save
-hl --json quote example-market --action buy --outcome yes --cash 25
-```
-
-Quote reads public Polymarket market data and order-book depth, then reports the
-estimated fill, slippage, fees, cost or proceeds, payout risk, and optional
-Signal edge. It never signs or submits an order. `--cash` is BUY-only; SELL
-quotes require `--shares`.
-
-Liquidity allocation, wallet management, and trade execution are outside the
-official `hl` CLI.
-
-For a broader discovery screen, `hl feed ensemble` runs several feed lenses
-(liquid core, active volume, movers, new markets, uncertainty, and LP quality),
-de-duplicates by slug, and writes a ranked candidate file:
+Arguments must be a JSON object, using exactly one input source:
 
 ```bash
-hl feed ensemble --limit 25 --output candidates.json
+hl call search_markets --file query.json
+cat query.json | hl call search_markets --stdin
+hl call search_markets --args '{"query":"bitcoin"}' | jq '.structuredContent'
 ```
 
-Signal-agent analysis is available under `hl signal`:
+Use `hl tools` as the authoritative list for your server. Tool names, schemas,
+and `requiredScope` come from the API, so the CLI does not need a release when
+a provider adds a tool.
+
+## Execution
+
+Polymarket order submission, cancellation, and order lookup use locally signed
+venue requests. Create a Hedge Layer token with `read` and `trade` scopes for
+submission and cancellation; order lookup requires `read`. New tokens are
+read-only by default. Inspect the exact schemas first:
 
 ```bash
-hl signal analyze "https://polymarket.com/event/example-market"
-hl signal analyze "https://polymarket.com/event/example-market" --context "Recent search notes"
-hl --json signal analyze "https://polymarket.com/event/example-market" | jq '.result.analysis'
+hl tools submit_polymarket_order
+hl tools cancel_polymarket_order
+hl tools get_polymarket_order
 ```
 
-## Changelog
+Use the venue SDK locally to sign the order and its request authentication.
+Your signing code should produce an arguments object containing `signed_body`
+(the exact signed request body as a string) and `auth` (address, API key,
+passphrase, timestamp, and signature). Pass that object through stdin or a
+private file so credentials do not enter shell history:
 
-See [CHANGELOG.md](CHANGELOG.md) for release history.
+```bash
+hl call submit_polymarket_order --stdin < signed-order-arguments.json
+hl call cancel_polymarket_order --stdin < signed-cancellation-arguments.json
+hl call get_polymarket_order --stdin < signed-order-lookup-arguments.json
+```
+
+Order lookup arguments contain `order_id` and `auth` instead of `signed_body`.
+The CLI preserves the exact `signed_body` string. It never signs requests,
+requests wallet private keys or CLOB API secrets, or retries calls. If a
+submission times out, reconcile its status with the venue before submitting
+again. See the [Hedge Layer execution guide](https://hedgelayer.ai/docs/execution)
+for the server contract and signing workflow.
+
+## Configuration
+
+Options take precedence over environment variables, then saved configuration:
+
+| Setting | Flag | Environment | Default |
+| --- | --- | --- | --- |
+| API origin | `--api-url` | `HL_API_URL` | `https://hedgelayer.ai` |
+| API token | `--token` | `HL_TOKEN` | Token saved by `hl auth login` |
+| HTTP diagnostics | `--verbose` | — | Off |
+
+The CLI does not load `.env` files. Export variables in your shell or secret
+manager. Configuration is saved to `~/.hedgelayer/config.json` with file mode
+`0600`. URLs must use HTTPS, except HTTP loopback servers for development.
+Redirects are rejected. Verbose output includes method, URL, and status only.
+
+## Development
+
+```bash
+npm ci
+npm run typecheck
+npm run lint
+npm test
+npm run build
+node dist/index.mjs --help
+```
+
+Tests cover the HTTP contract, the built binary against a local API server,
+authentication, signed payload preservation, error exits, redirects, and
+configuration permissions. They do not place live orders.
+
+This is a fresh command surface: the former `brief`, `research`, `feed`,
+`signal`, `quote`, and `profile` commands have been removed. Use the server's
+tools directly and let your chosen agent handle research workflows.
 
 ## License
 
