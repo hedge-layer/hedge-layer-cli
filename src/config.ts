@@ -32,8 +32,13 @@ export function loadConfig(): Config {
 
 export function saveConfig(config: Config): void {
   mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
+  // mode only applies to newly created files. Restrict existing storage before
+  // replacing credentials; if this fails, leave the previous contents intact.
+  if (process.platform !== "win32") {
+    chmodSync(CONFIG_DIR, 0o700);
+    if (existsSync(CONFIG_FILE)) chmodSync(CONFIG_FILE, 0o600);
+  }
   writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2) + "\n", { encoding: "utf-8", mode: 0o600 });
-  chmodSync(CONFIG_FILE, 0o600);
 }
 
 export function clearConfig(): void {
