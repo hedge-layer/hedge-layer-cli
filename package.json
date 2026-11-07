@@ -47,5 +47,11 @@
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.57.0",
     "vitest": "^4.1.8"
+  },
+  "overrides": {
+    "minimatch@>=7 <11": "11.0.1",
+    "tsup": {
+      "esbuild": "^0.28.2"
+    }
   }
 }
